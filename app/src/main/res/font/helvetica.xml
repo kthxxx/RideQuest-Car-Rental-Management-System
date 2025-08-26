@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Bold -->
+    <font
+        app:font="@font/helvetica_bold"
+        app:fontWeight="700"
+        app:fontStyle="normal" />
+
+    <!-- Bold Oblique -->
+    <font
+        app:font="@font/helvetica_bold_oblique"
+        app:fontWeight="700"
+        app:fontStyle="italic" />
+
+    <!-- Light -->
+    <font
+        app:font="@font/helvetica_light"
+        app:fontWeight="300"
+        app:fontStyle="normal" />
+
+    <!-- Oblique -->
+    <font
+        app:font="@font/helvetica_oblique"
+        app:fontWeight="400"
+        app:fontStyle="italic" />
+
+    <!-- Compressed (treat as Medium 500) -->
+    <font
+        app:font="@font/helvetica_compressed"
+        app:fontWeight="500"
+        app:fontStyle="normal" />
+
+    <!-- Rounded Bold (treat as SemiBold 600) -->
+    <font
+        app:font="@font/helvetica_rounded_bold"
+        app:fontWeight="600"
+        app:fontStyle="normal" />
+
+</font-family>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "921622162263",
+    "project_id": "ridequest-car-rental-app",
+    "storage_bucket": "ridequest-car-rental-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:921622162263:android:56d4bac1b826535ba3ac12",
+        "android_client_info": {
+          "package_name": "com.example.ridequestcarrentalapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCejoMkXxlU9RbkcAGRq1l06WABhAzFHFA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
