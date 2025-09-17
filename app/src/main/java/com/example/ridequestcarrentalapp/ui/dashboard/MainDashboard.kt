@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -77,7 +81,7 @@ fun MainDashboard(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Top Bar
+        // Top Bar - RideQuest Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -85,18 +89,29 @@ fun MainDashboard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            // RideQuest Logo and Title
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Orange, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DirectionsCar,
+                        contentDescription = "RideQuest Logo",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
                 Text(
-                    text = "Good Morning",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    fontFamily = Helvetica
-                )
-                Text(
-                    text = "Juan Dela Cruz",
-                    fontSize = 20.sp,
+                    text = "RideQuest",
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black,
+                    color = Orange,
                     fontFamily = Helvetica
                 )
             }
@@ -104,18 +119,35 @@ fun MainDashboard(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Notification Icon
-                IconButton(
-                    onClick = { onNotificationClick() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color.Gray.copy(alpha = 0.1f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = Color.Gray
-                    )
+                // Notification Icon with badge
+                Box {
+                    IconButton(
+                        onClick = { onNotificationClick() },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.Gray.copy(alpha = 0.1f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = Color.Gray
+                        )
+                    }
+                    // Notification badge
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .background(Color.Red, CircleShape)
+                            .align(Alignment.TopEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "2",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 // Profile Image
@@ -140,7 +172,7 @@ fun MainDashboard(
             onValueChange = { searchQuery = it },
             placeholder = {
                 Text(
-                    "Search by car, brand, fuel type...",
+                    "Search your dream car",
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
@@ -153,25 +185,12 @@ fun MainDashboard(
                 )
             },
             trailingIcon = {
-                Row {
-                    // Clear search button
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { showBrandFilter = !showBrandFilter }) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Brand Filter",
-                            tint = Orange
-                        )
-                    }
+                IconButton(onClick = { showBrandFilter = !showBrandFilter }) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Filter",
+                        tint = Orange
+                    )
                 }
             },
             modifier = Modifier
@@ -188,14 +207,14 @@ fun MainDashboard(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Categories Filter
+        // Categories Filter as horizontal chips
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
             items(categories) { category ->
-                CategoryChip(
+                CategoryChipNew(
                     category = category,
                     isSelected = category == selectedCategory,
                     onClick = {
@@ -227,51 +246,18 @@ fun MainDashboard(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Section Header with Results Count
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Available Cars",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    fontFamily = Helvetica
-                )
-                Text(
-                    text = "${filteredCars.size} cars found",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    fontFamily = Helvetica
-                )
-            }
-
-            Text(
-                text = "See All",
-                fontSize = 14.sp,
-                color = Orange,
-                fontFamily = Helvetica,
-                modifier = Modifier.clickable { /* See all action */ }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Cars List
-        LazyColumn(
+        // Cars Grid - 2 columns like in the design
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(filteredCars) { car ->
-                PhilippineCarCard(
+                CarCardGrid(
                     car = car,
                     onClick = { onCarClick(car) }
                 )
@@ -281,11 +267,17 @@ fun MainDashboard(
 }
 
 @Composable
-fun CategoryChip(
+fun CategoryChipNew(
     category: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val displayCategory = when(category) {
+        "Van/MPV" -> "Van / MPV"
+        "Electric/Hybrid" -> "EV"
+        else -> category
+    }
+
     Box(
         modifier = Modifier
             .background(
@@ -293,13 +285,13 @@ fun CategoryChip(
                 RoundedCornerShape(20.dp)
             )
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
-            text = category,
+            text = displayCategory,
             color = if (isSelected) Color.White else Color.Gray,
             fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
             fontFamily = Helvetica
         )
     }
@@ -331,7 +323,7 @@ fun BrandChip(
 }
 
 @Composable
-fun PhilippineCarCard(
+fun CarCardGrid(
     car: Car,
     onClick: () -> Unit
 ) {
@@ -341,111 +333,107 @@ fun PhilippineCarCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
             // Car Image
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(Color.Gray.copy(alpha = 0.05f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = car.imageRes),
                     contentDescription = car.name,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(60.dp)
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(60.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Car Details
-            Column(
-                modifier = Modifier.weight(1f)
+            // Car Name and Brand
+            Text(
+                text = "${car.brand} ${car.name}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                fontFamily = Helvetica,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = car.category,
+                fontSize = 12.sp,
+                color = Color.Gray,
+                fontFamily = Helvetica
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Car specs in compact form
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Brand and Car Name
-                Text(
-                    text = "${car.brand} ${car.name}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    fontFamily = Helvetica,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = "${car.year} Model",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    fontFamily = Helvetica
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Car Specs Row
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    DetailChip(
-                        icon = Icons.Default.Person,
-                        text = "${car.seats} seats"
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Seats",
+                        modifier = Modifier.size(12.dp),
+                        tint = Color.Gray
                     )
-                    DetailChip(
-                        icon = Icons.Default.LocalGasStation,
-                        text = car.fuelType
+                    Text(
+                        text = "${car.seats}",
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
                     )
-                    DetailChip(
-                        icon = Icons.Default.Settings,
-                        text = car.transmission
+                    Text(
+                        text = "seater",
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Transmission",
+                        modifier = Modifier.size(12.dp),
+                        tint = Color.Gray
+                    )
+                    Text(
+                        text = if (car.transmission == "Automatic") "Automatic" else "Manual",
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Rating and Availability
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Rating",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = car.rating.toString(),
-                            fontSize = 12.sp,
-                            color = Color.Gray,
-                            fontFamily = Helvetica
-                        )
-                    }
-
+                // Premium badge (if luxury)
+                if (car.category == "Luxury") {
                     Box(
                         modifier = Modifier
-                            .background(
-                                if (car.isAvailable) Color.Green.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f),
-                                RoundedCornerShape(6.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .background(Orange, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = if (car.isAvailable) "Available" else "Booked",
-                            fontSize = 10.sp,
-                            color = if (car.isAvailable) Color.Green else Color.Red,
+                            text = "Premium",
+                            fontSize = 8.sp,
+                            color = Color.White,
                             fontWeight = FontWeight.Medium,
                             fontFamily = Helvetica
                         )
@@ -453,51 +441,43 @@ fun PhilippineCarCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Price in PHP
-            Column(
-                horizontalAlignment = Alignment.End
+            // Price
+            Text(
+                text = "₱${car.pricePerDay.toInt()}",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Orange,
+                fontFamily = Helvetica
+            )
+            Text(
+                text = "per day",
+                fontSize = 10.sp,
+                color = Color.Gray,
+                fontFamily = Helvetica
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // View Details Button
+            Button(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Orange,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "₱${car.pricePerDay.toInt()}",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Orange,
-                    fontFamily = Helvetica
-                )
-                Text(
-                    text = "per day",
+                    text = "View Details",
                     fontSize = 12.sp,
-                    color = Color.Gray,
+                    fontWeight = FontWeight.Medium,
                     fontFamily = Helvetica
                 )
             }
         }
-    }
-}
-
-@Composable
-fun DetailChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
-            modifier = Modifier.size(12.dp),
-            tint = Color.Gray
-        )
-        Text(
-            text = text,
-            fontSize = 10.sp,
-            color = Color.Gray,
-            fontFamily = Helvetica
-        )
     }
 }
 

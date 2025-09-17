@@ -87,7 +87,7 @@ fun ProfileScreen(
     // Sample user data
     val userProfile = UserProfile(
         id = "user123",
-        name = "Juan Dela Cruz",
+        name = "Joshua Miguel Jamisola",
         email = "juan.delacruz@email.com",
         phone = "+63 912 345 6789",
         memberSince = "January 2023",

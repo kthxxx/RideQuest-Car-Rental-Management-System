@@ -16,9 +16,8 @@ import com.example.ridequestcarrentalapp.ui.profile.ProfileScreen
 import androidx.compose.runtime.LaunchedEffect
 import com.example.ridequestcarrentalapp.data.CarRepository
 import com.example.ridequestcarrentalapp.data.Car
-import com.example.ridequestcarrentalapp.ui.booking.BookingDetails
 import com.example.ridequestcarrentalapp.ui.booking.BookingFlowScreen
-
+import com.example.ridequestcarrentalapp.ui.notifications.NotificationsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,8 +49,7 @@ fun AppNavigation() {
                     navController.navigate("ProfileScreen")
                 },
                 onNotificationClick = {
-                    Toast.makeText(navController.context, "Notifications clicked", Toast.LENGTH_SHORT).show()
-                    // navController.navigate("NotificationScreen")
+                    navController.navigate("NotificationsScreen")
                 },
                 onCategoryClick = { category ->
                     Toast.makeText(navController.context, "Category: $category", Toast.LENGTH_SHORT).show()
@@ -76,7 +74,7 @@ fun AppNavigation() {
                     Toast.makeText(navController.context, "Payment Methods", Toast.LENGTH_SHORT).show()
                 },
                 onNotificationsClick = {
-                    Toast.makeText(navController.context, "Notification Settings", Toast.LENGTH_SHORT).show()
+                    navController.navigate("NotificationsScreen") // Navigates to notifications screen
                 },
                 onHelpSupportClick = {
                     Toast.makeText(navController.context, "Help & Support", Toast.LENGTH_SHORT).show()
@@ -86,7 +84,6 @@ fun AppNavigation() {
                 },
                 onLogoutClick = {
                     Toast.makeText(navController.context, "Logout", Toast.LENGTH_SHORT).show()
-                    // Handle logout logic here
                 }
             )
         }
@@ -105,7 +102,6 @@ fun AppNavigation() {
                     }
                 )
             } else {
-                // Handle case where car is not found
                 LaunchedEffect(Unit) {
                     Toast.makeText(navController.context, "Car not found", Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
@@ -113,7 +109,7 @@ fun AppNavigation() {
             }
         }
 
-
+        // Booking Flow Screen
         composable("booking_flow/{carId}") { backStackEntry ->
             val carId = backStackEntry.arguments?.getString("carId") ?: ""
             val car = CarRepository.getCarById(carId)
@@ -122,9 +118,8 @@ fun AppNavigation() {
                 BookingFlowScreen(
                     car = car,
                     onBackClick = { navController.popBackStack() },
-                    onConfirmBookingClick = { bookingDetails ->
-                        // Proceed with bookingDetails (e.g. navigate to confirmation)
-                        navController.navigate("booking_confirmation")
+                    onConfirmBookingClick = {
+                        // Handle confirmation logic
                     }
                 )
             } else {
@@ -135,7 +130,25 @@ fun AppNavigation() {
             }
         }
 
-
+        // Notifications Screen
+        composable("NotificationsScreen") {
+            NotificationsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onNotificationClick = { notification ->
+                    // Optional: Handle clicks on individual notifications, e.g., navigate to a specific booking.
+                    // Example: navController.navigate("booking_details/${notification.relatedBookingId}")
+                    Toast.makeText(navController.context, "Notification clicked: ${notification.title}", Toast.LENGTH_SHORT).show()
+                },
+                onMarkAllReadClick = {
+                    Toast.makeText(navController.context, "All notifications marked as read", Toast.LENGTH_SHORT).show()
+                },
+                onNotificationSettingsClick = {
+                    // Optional: Navigate to a dedicated settings screen for notifications.
+                    Toast.makeText(navController.context, "Notification Settings clicked", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
     }
 }
-

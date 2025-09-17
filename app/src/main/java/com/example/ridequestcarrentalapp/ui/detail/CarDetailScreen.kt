@@ -4,8 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,24 +42,15 @@ fun CarDetailScreen(
     onCallClick: () -> Unit = {}
 ) {
     var isFavorite by remember { mutableStateOf(false) }
-    var selectedImageIndex by remember { mutableStateOf(0) }
 
-    val carImages = listOf(
-        R.drawable.white_back_logo,
-        R.drawable.white_back_logo,
-        R.drawable.white_back_logo,
-        R.drawable.white_back_logo
-    )
-
+    // Enhanced car features matching the design
     val carFeatures = listOf(
-        "Air Conditioning", "GPS Navigation", "Bluetooth", "USB Port",
-        "Power Steering", "Central Locking", "Electric Windows", "ABS"
-    )
-
-    val reviews = listOf(
-        Review("Juan Santos", "Excellent car! Very clean and comfortable.", 5.0f, "2 days ago"),
-        Review("Maria Cruz", "Great experience. Highly recommended!", 4.5f, "1 week ago"),
-        Review("Jose Dela Cruz", "Good value for money. Will rent again.", 4.0f, "2 weeks ago")
+        CarFeature("Capacity", "${car.seats} Seats", Icons.Default.Person),
+        CarFeature("Engine Out", "670 HP", Icons.Default.Speed),
+        CarFeature("Max Speed", "250km/h", Icons.Default.Timeline),
+        CarFeature("Advance", "Autopilot", Icons.Default.SmartToy),
+        CarFeature("Single Charge", "405 Miles", Icons.Default.ElectricCar),
+        CarFeature("Advance", "Auto Parking", Icons.Default.LocalParking)
     )
 
     Box(
@@ -72,6 +64,7 @@ fun CarDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 100.dp)
         ) {
+            // Header with back button and menu
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -100,86 +93,55 @@ fun CarDetailScreen(
                     fontFamily = Helvetica
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = {
-                            isFavorite = !isFavorite
-                            onFavoriteClick(car)
-                        },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(Color.Gray.copy(alpha = 0.1f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isFavorite) Color.Red else Color.Gray
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { onShareClick(car) },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(Color.Gray.copy(alpha = 0.1f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
-                            tint = Color.Gray
-                        )
-                    }
+                IconButton(
+                    onClick = { /* Menu action */ },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.Gray.copy(alpha = 0.1f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = Color.Black
+                    )
                 }
             }
 
+            // Car Image Section
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .height(250.dp),
+                    .height(200.dp),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                colors = CardDefaults.cardColors(containerColor = Color.Gray.copy(alpha = 0.05f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = carImages[selectedImageIndex]),
+                        painter = painterResource(id = car.imageRes),
                         contentDescription = car.name,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    Row(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        carImages.forEachIndexed { index, _ ->
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(
-                                        if (index == selectedImageIndex) Orange else Color.White.copy(alpha = 0.5f),
-                                        CircleShape
-                                    )
-                                    .clickable { selectedImageIndex = index }
-                            )
-                        }
-                    }
+                            .fillMaxWidth(0.9f)
+                            .fillMaxHeight(0.8f)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            // Car Title and Price
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "${car.brand} ${car.name}",
                             fontSize = 24.sp,
@@ -188,7 +150,7 @@ fun CarDetailScreen(
                             fontFamily = Helvetica
                         )
                         Text(
-                            text = "${car.year} Model • ${car.category}",
+                            text = "Premium Car",
                             fontSize = 14.sp,
                             color = Color.Gray,
                             fontFamily = Helvetica
@@ -197,7 +159,7 @@ fun CarDetailScreen(
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = "₱${car.pricePerDay.toInt()}",
-                            fontSize = 28.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Orange,
                             fontFamily = Helvetica
@@ -210,128 +172,38 @@ fun CarDetailScreen(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Rating",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "${car.rating} (${reviews.size} reviews)",
-                            fontSize = 14.sp,
-                            color = Color.Gray,
-                            fontFamily = Helvetica
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                if (car.isAvailable) Color.Green.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f),
-                                RoundedCornerShape(8.dp)
-                            )
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (car.isAvailable) "Available Now" else "Currently Booked",
-                            fontSize = 12.sp,
-                            color = if (car.isAvailable) Color.Green else Color.Red,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = Helvetica
-                        )
-                    }
-                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Gray.copy(alpha = 0.05f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Specifications",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        fontFamily = Helvetica
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        SpecificationItem(
-                            icon = Icons.Default.Person,
-                            title = "Seats",
-                            value = "${car.seats} People",
-                            modifier = Modifier.weight(1f)
-                        )
-                        SpecificationItem(
-                            icon = Icons.Default.LocalGasStation,
-                            title = "Fuel Type",
-                            value = car.fuelType,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        SpecificationItem(
-                            icon = Icons.Default.Settings,
-                            title = "Transmission",
-                            value = car.transmission,
-                            modifier = Modifier.weight(1f)
-                        )
-                        SpecificationItem(
-                            icon = Icons.Default.DirectionsCar,
-                            title = "Category",
-                            value = car.category,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
+            // Car Features Section
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text(
-                    text = "Features & Amenities",
+                    text = "Car features",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
                     fontFamily = Helvetica
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 4.dp)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Features Grid - 3 columns, 2 rows
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.height(200.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(carFeatures) { feature ->
-                        FeatureChip(feature)
+                        FeatureCard(feature = feature)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Reviews Section
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -339,144 +211,251 @@ fun CarDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Customer Reviews",
+                        text = "Review (125)",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         fontFamily = Helvetica
                     )
                     Text(
-                        text = "View All",
+                        text = "See All",
                         fontSize = 14.sp,
-                        color = Orange,
+                        color = Color.Gray,
                         fontFamily = Helvetica,
-                        modifier = Modifier.clickable { }
+                        modifier = Modifier.clickable { /* Navigate to all reviews */ }
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                reviews.forEach { review ->
-                    ReviewItem(review)
-                    Spacer(modifier = Modifier.height(12.dp))
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // First Review
+                    ReviewCard(
+                        name = "Mr. Jack",
+                        rating = 5.0f,
+                        comment = "The rental car was clean, reliable, and the service was quick and efficient.",
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Second Review
+                    ReviewCard(
+                        name = "Robert",
+                        rating = 5.0f,
+                        comment = "The rental car was clean, reliable and the service was quick.",
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
 
+        // Bottom Book Now Button
         Card(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Orange),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { onBookNowClick(car) }
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = { onCallClick() },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(Orange)
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Phone,
-                        contentDescription = "Call",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Call", fontWeight = FontWeight.Medium, fontFamily = Helvetica)
-                }
-                Button(
-                    onClick = { onBookNowClick(car) },
-                    modifier = Modifier.weight(2f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Orange),
-                    enabled = car.isAvailable
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.EventAvailable,
-                        contentDescription = "Book",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (car.isAvailable) "Book Now" else "Not Available",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = Helvetica
-                    )
-                }
+                Text(
+                    text = "Book Now",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontFamily = Helvetica
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "Book Now",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-fun SpecificationItem(icon: ImageVector, title: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(imageVector = icon, contentDescription = title, tint = Orange, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(title, fontSize = 12.sp, color = Color.Gray, fontFamily = Helvetica)
-        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.Black, fontFamily = Helvetica, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-fun FeatureChip(feature: String) {
-    Box(
-        modifier = Modifier
-            .background(Orange.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(feature, fontSize = 12.sp, color = Orange, fontWeight = FontWeight.Medium, fontFamily = Helvetica)
-    }
-}
-
-@Composable
-fun ReviewItem(review: Review) {
+fun ReviewCard(
+    name: String,
+    rating: Float,
+    comment: String,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Gray.copy(alpha = 0.05f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            // Profile and Rating Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(review.userName, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.Black, fontFamily = Helvetica)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFFFD700), modifier = Modifier.size(16.dp))
-                    Text(review.rating.toString(), fontSize = 12.sp, color = Color.Gray, fontFamily = Helvetica)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Profile Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(Orange.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = name.first().toString(),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Orange,
+                            fontFamily = Helvetica
+                        )
+                    }
+
+                    Text(
+                        text = name,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                }
+
+                // Rating
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = rating.toString(),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Rating",
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(review.comment, fontSize = 13.sp, color = Color.Gray, fontFamily = Helvetica)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(review.date, fontSize = 11.sp, color = Color.Gray.copy(alpha = 0.7f), fontFamily = Helvetica)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Review Comment
+            Text(
+                text = comment,
+                fontSize = 12.sp,
+                color = Color.Gray,
+                fontFamily = Helvetica,
+                lineHeight = 16.sp
+            )
         }
     }
 }
+
+@Composable
+fun FeatureCard(feature: CarFeature) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Gray.copy(alpha = 0.05f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Icon
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(Orange.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = feature.icon,
+                    contentDescription = feature.title,
+                    tint = Orange,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Title
+            Text(
+                text = feature.title,
+                fontSize = 10.sp,
+                color = Color.Gray,
+                fontFamily = Helvetica,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+
+            // Value
+            Text(
+                text = feature.value,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                fontFamily = Helvetica,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+data class CarFeature(
+    val title: String,
+    val value: String,
+    val icon: ImageVector
+)
 
 data class Review(val userName: String, val comment: String, val rating: Float, val date: String)
 
 private val sampleCar = Car(
     id = "1",
-    name = "Vios",
-    brand = "Toyota",
-    model = "Vios",
+    name = "Model S",
+    brand = "Tesla",
+    model = "Model S",
     year = 2023,
-    pricePerDay = 1800.0,
-    rating = 4.5f,
+    pricePerDay = 18000.0,
+    rating = 4.8f,
     imageRes = R.drawable.white_back_logo,
-    fuelType = "Gasoline",
+    fuelType = "Electric",
     transmission = "Automatic",
     seats = 5,
     isAvailable = true,
-    category = "Economy"
+    category = "Luxury"
 )
 
 @Preview(showBackground = true)
