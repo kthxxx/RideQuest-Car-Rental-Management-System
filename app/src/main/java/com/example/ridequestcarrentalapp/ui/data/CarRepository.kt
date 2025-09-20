@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
+
 // Enhanced Car data class with more comprehensive features
 data class Car(
     val id: String = UUID.randomUUID().toString(),
@@ -88,6 +89,7 @@ data class CarSearchCriteria(
     val availableTo: String = "",
     val minRating: Float = 0.0f,
     val features: List<String> = emptyList(),
+    val availableOnly: Boolean = false,
     val sortBy: SortOption = SortOption.PRICE_LOW_TO_HIGH
 )
 
@@ -131,6 +133,10 @@ class CarRepositoryImpl : CarRepository {
 
     override suspend fun searchCars(criteria: CarSearchCriteria): List<Car> {
         var cars = _carsStateFlow.value
+
+        if (criteria.availableOnly) {
+            cars = cars.filter { it.isAvailable }
+        }
 
         // Apply filters
         if (criteria.query.isNotEmpty()) {

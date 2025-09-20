@@ -25,7 +25,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ridequestcarrentalapp.R
@@ -45,7 +44,9 @@ data class CarLocation(
 )
 
 // ViewModel for map state management
-class MapViewModel(private val repository: CarRepository = CarRepositoryFactory.create()) : androidx.lifecycle.ViewModel() {
+class MapViewModel(
+    private val repository: CarRepository = CarRepositoryFactory.create()
+) : androidx.lifecycle.ViewModel() {
     private val _uiState = mutableStateOf(MapUiState())
     val uiState: State<MapUiState> = _uiState
 
@@ -60,7 +61,7 @@ class MapViewModel(private val repository: CarRepository = CarRepositoryFactory.
     }
 
     private fun loadCarLocations() {
-        androidx.lifecycle.viewModelScope.launch {
+        viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val cars = repository.getAllCars()
@@ -83,7 +84,7 @@ class MapViewModel(private val repository: CarRepository = CarRepositoryFactory.
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = "Failed to load car locations"
+                    errorMessage = "Failed to load car locations: ${e.message}"
                 )
             }
         }
@@ -237,6 +238,23 @@ fun MapViewScreen(
                 )
             }
         )
+
+        // Error message
+        uiState.errorMessage?.let { error ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Red.copy(alpha = 0.1f))
+            ) {
+                Text(
+                    text = error,
+                    color = Color.Red,
+                    modifier = Modifier.padding(12.dp),
+                    fontSize = 14.sp
+                )
+            }
+        }
 
         // Map Container (Placeholder since Google Maps requires API setup)
         Box(
@@ -436,7 +454,7 @@ private fun MockMapView(
 
             Box(
                 modifier = Modifier
-                    .offset(x = offsetX, y = offsetY)
+                    .absoluteOffset(x = offsetX, y = offsetY)
                     .size(if (selectedLocation?.car?.id == location.car.id) 40.dp else 30.dp)
                     .background(
                         if (location.car.isAvailable) Orange else Color.Gray,
