@@ -33,9 +33,10 @@ class AuthenticationManager(context: Context) {
         val email = prefs.getString("user_email", null)
         val name = prefs.getString("user_name", null)
         val phone = prefs.getString("user_phone", null)
+        val profileImage = prefs.getString("user_profile_image", null)
 
         if (userId != null && email != null && name != null && phone != null) {
-            _currentUser.value = User(userId, email, name, phone)
+            _currentUser.value = User(userId, email, name, phone, profileImage)
             _isLoggedIn.value = true
         }
     }
@@ -106,6 +107,7 @@ class AuthenticationManager(context: Context) {
             putString("user_email", user.email)
             putString("user_name", user.name)
             putString("user_phone", user.phone)
+            putString("user_profile_image", user.profileImage)
             apply()
         }
     }
@@ -118,7 +120,7 @@ class AuthenticationManager(context: Context) {
     }
 
     private fun isValidEmail(email: String): Boolean {
-        return email.contains("@") && email.contains(".")
+        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 
     private fun getUserNameFromEmail(email: String): String {

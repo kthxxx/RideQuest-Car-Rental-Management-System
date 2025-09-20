@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ridequestcarrentalapp.R
 import com.example.ridequestcarrentalapp.data.*
 import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import com.example.ridequestcarrentalapp.ui.theme.Orange
@@ -56,7 +58,7 @@ fun TopBarSection(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.DirectionsCar,
+                    imageVector = Icons.Default.DirectionsCar, // Fallback to default icon
                     contentDescription = "RideQuest Logo",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -210,6 +212,7 @@ fun CategoryChipEnhanced(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvancedFiltersSection(
     searchCriteria: CarSearchCriteria,
@@ -286,7 +289,7 @@ fun AdvancedFiltersSection(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(FuelType.values()) { fuel ->
+                items(FuelType.values().toList()) { fuel ->
                     FilterChip(
                         onClick = {
                             val newValue = if (searchCriteria.fuelType == fuel) null else fuel
@@ -314,7 +317,7 @@ fun AdvancedFiltersSection(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(Transmission.values()) { tx ->
+                items(Transmission.values().toList()) { tx ->
                     FilterChip(
                         onClick = {
                             val newValue = if (searchCriteria.transmission == tx) null else tx
@@ -921,7 +924,7 @@ fun EnhancedMainDashboard(
     onBrandClick: (String) -> Unit = {},
     onQuickBookClick: () -> Unit = {},
     onMapViewClick: () -> Unit = {},
-    viewModel: DashboardViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    viewModel: DashboardViewModel = viewModel()
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         // Main dashboard content
@@ -939,7 +942,5 @@ fun EnhancedMainDashboard(
             onQuickBookClick = onQuickBookClick,
             onMapViewClick = onMapViewClick
         )
-
-
     }
 }

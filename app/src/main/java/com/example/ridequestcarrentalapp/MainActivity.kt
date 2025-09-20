@@ -27,6 +27,7 @@ import com.example.ridequestcarrentalapp.data.CarRepositoryFactory
 import com.example.ridequestcarrentalapp.ui.dashboard.EnhancedMainDashboard
 import com.example.ridequestcarrentalapp.ui.detail.CarDetailScreen
 import com.example.ridequestcarrentalapp.ui.booking.BookingFlowScreen
+import com.example.ridequestcarrentalapp.ui.map.MapViewScreen
 import com.example.ridequestcarrentalapp.ui.theme.RideQuestCarRentalAppTheme
 import com.example.ridequestcarrentalapp.ui.theme.Orange
 import androidx.navigation.compose.NavHost
@@ -84,8 +85,7 @@ fun RideQuestApp() {
                             navController.navigate("quick_book")
                         },
                         onMapViewClick = {
-                            // Navigate to map view
-                            Toast.makeText(context, "Map view feature coming soon!", Toast.LENGTH_SHORT).show()
+                            navController.navigate("map_view")
                         }
                     )
                 }
@@ -117,6 +117,16 @@ fun RideQuestApp() {
             QuickBookScreen(
                 onBackClick = { navController.popBackStack() },
                 onCarSelected = { car ->
+                    navController.navigate("car_detail/${car.id}")
+                }
+            )
+        }
+
+        // Map view route
+        composable("map_view") {
+            MapViewScreen(
+                onBackClick = { navController.popBackStack() },
+                onCarClick = { car ->
                     navController.navigate("car_detail/${car.id}")
                 }
             )
