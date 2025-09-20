@@ -82,7 +82,7 @@ fun ProfileScreen(
     onSettingsClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {}
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     // Sample user data
     val userProfile = UserProfile(
@@ -229,7 +229,7 @@ fun ProfileTab(
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(50.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Profile Image

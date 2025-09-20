@@ -28,12 +28,70 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewModelScope
 import com.example.ridequestcarrentalapp.R
-import com.example.ridequestcarrentalapp.data.CarRepository
-import com.example.ridequestcarrentalapp.data.Car
+import com.example.ridequestcarrentalapp.data.*
 import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import com.example.ridequestcarrentalapp.ui.theme.Orange
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.PaddingValues
 
+
+// ViewModel for dashboard state management
+class DashboardViewModel(private val repository: CarRepository = CarRepositoryFactory.create()) : androidx.lifecycle.ViewModel() {
+    private val _uiState = mutableStateOf(DashboardUiState())
+    val uiState: State<DashboardUiState> = _uiState
+
+    private val _cars = mutableStateOf<List<Car>>(emptyList())
+    val cars: State<List<Car>> = _cars
+
+    private val _featuredCars = mutableStateOf<List<Car>>(emptyList())
+    val featuredCars: State<List<Car>> = _featuredCars
+
+    private val _brands = mutableStateOf<List<String>>(emptyList())
+    val brands: State<List<String>> = _brands
+
+    init {
+        loadData()
+    }
+
+    private fun loadData() {
+        viewModelScope.launch {
+            val all = repository.getAllCars()
+            _cars.value = all
+            _featuredCars.value = repository.getFeaturedCars()
+            val computedBrands = listOf("All Brands") + all.map { it.brand }.distinct().sorted()
+            _brands.value = computedBrands
+        }
+    }
+
+    fun updateSearchCriteria(criteria: CarSearchCriteria) {
+        _uiState.value = _uiState.value.copy(searchCriteria = criteria, isLoading = true)
+        viewModelScope.launch {
+            val filteredCars = repository.searchCars(criteria)
+            _cars.value = filteredCars
+            _uiState.value = _uiState.value.copy(isLoading = false)
+        }
+    }
+
+    fun toggleFilters() {
+        _uiState.value = _uiState.value.copy(showFilters = !_uiState.value.showFilters)
+    }
+
+    fun resetFilters() {
+        val defaultCriteria = CarSearchCriteria()
+        updateSearchCriteria(defaultCriteria)
+        _uiState.value = _uiState.value.copy(showFilters = false)
+    }
+}
+
+data class DashboardUiState(
+    val searchCriteria: CarSearchCriteria = CarSearchCriteria(),
+    val isLoading: Boolean = false,
+    val showFilters: Boolean = false,
+    val showAdvancedFilters: Boolean = false
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,39 +99,27 @@ fun MainDashboard(
     onCarClick: (Car) -> Unit = {},
     onProfileClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onCategoryClick: (String) -> Unit = {},
-    onBrandClick: (String) -> Unit = {}
+    onCategoryClick: (CarCategory) -> Unit = {},
+    onBrandClick: (String) -> Unit = {},
+    viewModel: DashboardViewModel = viewModel()
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("All") }
-    var selectedBrand by remember { mutableStateOf("All Brands") }
-    var showBrandFilter by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState
+    val cars by viewModel.cars
+    val featuredCars by viewModel.featuredCars
+    val brands by viewModel.brands
 
-    // Car categories
-    val categories = listOf("All", "Economy", "SUV", "Van/MPV", "Luxury", "Electric/Hybrid")
+    // Categories with enum support
+    val categories = listOf(
+        null to "All",
+        CarCategory.ECONOMY to "Economy",
+        CarCategory.SUV to "SUV",
+        CarCategory.VAN_MPV to "Van/MPV",
+        CarCategory.LUXURY to "Luxury",
+        CarCategory.ELECTRIC_HYBRID to "EV"
+    )
 
-    // Car brands
-    val brands = listOf("All Brands", "Toyota", "Honda", "Mitsubishi", "Nissan", "Ford", "Hyundai", "Kia", "Suzuki", "BMW", "Mercedes", "Audi", "Lexus", "Tesla", "BYD", "MG")
-
-    // Philippine car rental data with realistic pricing in PHP
-    val philippineCars = CarRepository.getAllCars()
-
-    // Advanced filtering logic
-    val filteredCars = philippineCars.filter { car ->
-        val matchesSearch = if (searchQuery.isBlank()) {
-            true
-        } else {
-            car.name.contains(searchQuery, ignoreCase = true) ||
-                    car.brand.contains(searchQuery, ignoreCase = true) ||
-                    car.model.contains(searchQuery, ignoreCase = true) ||
-                    car.fuelType.contains(searchQuery, ignoreCase = true) ||
-                    car.transmission.contains(searchQuery, ignoreCase = true)
-        }
-
-        val matchesCategory = selectedCategory == "All" || car.category == selectedCategory
-        val matchesBrand = selectedBrand == "All Brands" || car.brand == selectedBrand
-
-        matchesSearch && matchesCategory && matchesBrand
+    LaunchedEffect(Unit) {
+        // Initial load happens in ViewModel init via loadData()
     }
 
     Column(
@@ -81,402 +127,186 @@ fun MainDashboard(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Top Bar - RideQuest Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // RideQuest Logo and Title
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Orange, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DirectionsCar,
-                        contentDescription = "RideQuest Logo",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Text(
-                    text = "RideQuest",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Orange,
-                    fontFamily = Helvetica
+        // Enhanced Top Bar with better design
+        TopBarSection(
+            onProfileClick = onProfileClick,
+            onNotificationClick = onNotificationClick
+        )
+
+        // Enhanced Search Bar with more options
+        SearchBarSection(
+            searchCriteria = uiState.searchCriteria,
+            onSearchChange = { query ->
+                viewModel.updateSearchCriteria(
+                    uiState.searchCriteria.copy(query = query)
                 )
+            },
+            onFilterToggle = {
+                viewModel.toggleFilters()
             }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Notification Icon with badge
-                Box {
-                    IconButton(
-                        onClick = { onNotificationClick() },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(Color.Gray.copy(alpha = 0.1f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = Color.Gray
-                        )
-                    }
-                    // Notification badge
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .background(Color.Red, CircleShape)
-                            .align(Alignment.TopEnd),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "2",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                // Profile Image
-                IconButton(
-                    onClick = { onProfileClick() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Orange, CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = Color.White
-                    )
-                }
-            }
-        }
-
-        // Enhanced Search Bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = {
-                Text(
-                    "Search your dream car",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = Color.Gray
-                )
-            },
-            trailingIcon = {
-                IconButton(onClick = { showBrandFilter = !showBrandFilter }) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = "Filter",
-                        tint = Orange
-                    )
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Orange,
-                unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
-                unfocusedContainerColor = Color.Gray.copy(alpha = 0.05f),
-                focusedContainerColor = Color.Gray.copy(alpha = 0.05f)
-            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Categories Filter as horizontal chips
+        // Categories Filter
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(categories) { category ->
-                CategoryChipNew(
-                    category = category,
-                    isSelected = category == selectedCategory,
+            items(categories) { (category, displayName) ->
+                CategoryChipEnhanced(
+                    category = displayName,
+                    isSelected = category == uiState.searchCriteria.category,
                     onClick = {
-                        selectedCategory = category
-                        onCategoryClick(category)
+                        viewModel.updateSearchCriteria(
+                            uiState.searchCriteria.copy(category = category)
+                        )
+                        category?.let { onCategoryClick(it) }
                     }
                 )
             }
         }
 
-        // Brand Filter (conditionally shown)
-        if (showBrandFilter) {
-            Spacer(modifier = Modifier.height(12.dp))
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp)
-            ) {
-                items(brands) { brand ->
-                    BrandChip(
-                        brand = brand,
-                        isSelected = brand == selectedBrand,
-                        onClick = {
-                            selectedBrand = brand
-                            onBrandClick(brand)
-                        }
-                    )
-                }
-            }
+        // Advanced Filters Section (collapsible)
+        if (uiState.showFilters) {
+            AdvancedFiltersSection(
+                searchCriteria = uiState.searchCriteria,
+                brands = brands,
+                onCriteriaChange = { viewModel.updateSearchCriteria(it) },
+                onReset = { viewModel.resetFilters() }
+            )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Cars Grid - 2 columns like in the design
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(filteredCars) { car ->
-                CarCardGrid(
-                    car = car,
-                    onClick = { onCarClick(car) }
-                )
-            }
+        // Quick Stats Row
+        if (uiState.searchCriteria.query.isEmpty() &&
+            uiState.searchCriteria.category == null) {
+            QuickStatsSection(
+                totalCars = cars.size,
+                availableCars = cars.count { it.isAvailable },
+                featuredCount = featuredCars.size
+            )
+            Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-}
 
-@Composable
-fun CategoryChipNew(
-    category: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val displayCategory = when(category) {
-        "Van/MPV" -> "Van / MPV"
-        "Electric/Hybrid" -> "EV"
-        else -> category
-    }
-
-    Box(
-        modifier = Modifier
-            .background(
-                if (isSelected) Orange else Color.Gray.copy(alpha = 0.1f),
-                RoundedCornerShape(20.dp)
+        // Featured Cars Section (if no search/filter applied)
+        if (uiState.searchCriteria.query.isEmpty() &&
+            uiState.searchCriteria.category == null &&
+            featuredCars.isNotEmpty()) {
+            FeaturedCarsSection(
+                featuredCars = featuredCars,
+                onCarClick = onCarClick
             )
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
-        Text(
-            text = displayCategory,
-            color = if (isSelected) Color.White else Color.Gray,
-            fontSize = 14.sp,
-            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-            fontFamily = Helvetica
-        )
-    }
-}
+            Spacer(modifier = Modifier.height(20.dp))
+        }
 
-@Composable
-fun BrandChip(
-    brand: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .background(
-                if (isSelected) Orange.copy(alpha = 0.2f) else Color.Gray.copy(alpha = 0.05f),
-                RoundedCornerShape(16.dp)
-            )
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(
-            text = brand,
-            color = if (isSelected) Orange else Color.Gray,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-            fontFamily = Helvetica
-        )
-    }
-}
-
-@Composable
-fun CarCardGrid(
-    car: Car,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Car Image
+        // Loading state
+        if (uiState.isLoading) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .background(Color.Gray.copy(alpha = 0.05f), RoundedCornerShape(12.dp)),
+                modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = car.imageRes),
-                    contentDescription = car.name,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(60.dp)
-                )
+                CircularProgressIndicator(color = Orange)
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Car Name and Brand
-            Text(
-                text = "${car.brand} ${car.name}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                fontFamily = Helvetica,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = car.category,
-                fontSize = 12.sp,
-                color = Color.Gray,
-                fontFamily = Helvetica
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Car specs in compact form
+        } else {
+            // Results header
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Seats",
-                        modifier = Modifier.size(12.dp),
-                        tint = Color.Gray
-                    )
-                    Text(
-                        text = "${car.seats}",
-                        fontSize = 10.sp,
-                        color = Color.Gray,
-                        fontFamily = Helvetica
-                    )
-                    Text(
-                        text = "seater",
-                        fontSize = 10.sp,
-                        color = Color.Gray,
-                        fontFamily = Helvetica
-                    )
-
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Transmission",
-                        modifier = Modifier.size(12.dp),
-                        tint = Color.Gray
-                    )
-                    Text(
-                        text = if (car.transmission == "Automatic") "Automatic" else "Manual",
-                        fontSize = 10.sp,
-                        color = Color.Gray,
-                        fontFamily = Helvetica
-                    )
-                }
-
-                // Premium badge (if luxury)
-                if (car.category == "Luxury") {
-                    Box(
-                        modifier = Modifier
-                            .background(Orange, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "Premium",
-                            fontSize = 8.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = Helvetica
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Price
-            Text(
-                text = "₱${car.pricePerDay.toInt()}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Orange,
-                fontFamily = Helvetica
-            )
-            Text(
-                text = "per day",
-                fontSize = 10.sp,
-                color = Color.Gray,
-                fontFamily = Helvetica
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // View Details Button
-            Button(
-                onClick = onClick,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Orange,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(8.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "View Details",
-                    fontSize = 12.sp,
+                    text = "${cars.size} cars available",
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
+                    color = Color.Black,
                     fontFamily = Helvetica
                 )
+
+                // Sort options
+                SortingChips(
+                    currentSort = uiState.searchCriteria.sortBy,
+                    onSortChange = { sortOption ->
+                        viewModel.updateSearchCriteria(
+                            uiState.searchCriteria.copy(sortBy = sortOption)
+                        )
+                    }
+                )
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Cars Grid - Enhanced layout
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(cars) { car ->
+                    EnhancedCarCard(
+                        car = car,
+                        onClick = { onCarClick(car) }
+                    )
+                }
+            }
+
+            // Empty state
+            if (cars.isEmpty()) {
+                EmptyStateSection(
+                    onResetFilters = { viewModel.resetFilters() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyStateSection(
+    onResetFilters: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.SearchOff,
+            contentDescription = "No results",
+            tint = Color.Gray,
+            modifier = Modifier.size(64.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No cars found",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black
+        )
+        Text(
+            text = "Try adjusting your search or filters",
+            fontSize = 14.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onResetFilters,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Orange,
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = "Reset Filters",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

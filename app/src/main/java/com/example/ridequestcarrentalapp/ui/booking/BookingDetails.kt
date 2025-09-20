@@ -30,6 +30,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.app.DatePickerDialog
 import android.widget.DatePicker
+import com.example.ridequestcarrentalapp.data.CarCategory
+import com.example.ridequestcarrentalapp.data.FuelType
+import com.example.ridequestcarrentalapp.data.Transmission
 
 data class BookingDetails(
     val car: Car,
@@ -153,11 +156,11 @@ private val sampleCar = Car(
     pricePerDay = 1800.0,
     rating = 4.5f,
     imageRes = R.drawable.white_back_logo,
-    fuelType = "Gasoline",
-    transmission = "Automatic",
+    fuelType = FuelType.DIESEL,
+    transmission = Transmission.AUTOMATIC,
     seats = 5,
     isAvailable = true,
-    category = "Economy"
+    category = CarCategory.ECONOMY
 )
 
 @Preview(showBackground = true)

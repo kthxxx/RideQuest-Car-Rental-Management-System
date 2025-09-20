@@ -31,6 +31,9 @@ import com.example.ridequestcarrentalapp.R
 import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import com.example.ridequestcarrentalapp.ui.theme.Orange
 import com.example.ridequestcarrentalapp.data.Car
+import com.example.ridequestcarrentalapp.data.CarCategory
+import com.example.ridequestcarrentalapp.data.FuelType
+import com.example.ridequestcarrentalapp.data.Transmission
 
 @Composable
 fun CarDetailScreen(
@@ -451,11 +454,11 @@ private val sampleCar = Car(
     pricePerDay = 18000.0,
     rating = 4.8f,
     imageRes = R.drawable.white_back_logo,
-    fuelType = "Electric",
-    transmission = "Automatic",
+    fuelType = FuelType.GASOLINE,
+    transmission = Transmission.AUTOMATIC,
     seats = 5,
     isAvailable = true,
-    category = "Luxury"
+    category = CarCategory.LUXURY
 )
 
 @Preview(showBackground = true)
