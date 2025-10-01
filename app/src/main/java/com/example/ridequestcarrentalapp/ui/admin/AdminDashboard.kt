@@ -293,7 +293,7 @@ fun DashboardOverview(stats: AdminStats) {
                         StatCard("Total Vehicles", stats.totalVehicles.toString(), Icons.Default.DirectionsCar, Color(0xFF9C27B0)),
                         StatCard("Subscribers", stats.totalSubscribers.toString(), Icons.Default.Email, Color(0xFFFF9800)),
                         StatCard("Queries", stats.totalQueries.toString(), Icons.Default.ContactSupport, Color(0xFFF44336)),
-                        StatCard("Revenue", "₱${String.format("%,.0f", stats.revenue)}", Icons.Default.AttachMoney, Color(0xFF009688)),
+                        StatCard("Revenue", "â‚±${String.format("%,.0f", stats.revenue)}", Icons.Default.AttachMoney, Color(0xFF009688)),
                         StatCard("Testimonials", stats.testimonials.toString(), Icons.Default.Star, Color(0xFFFFEB3B))
                     )
                 ) { statCard ->
@@ -780,13 +780,13 @@ fun BookingItem(booking: Booking) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "${booking.vehicleName} • ${booking.startDate} to ${booking.endDate}",
+                text = "${booking.vehicleName} â€¢ ${booking.startDate} to ${booking.endDate}",
                 fontSize = 12.sp,
                 color = Color.Gray,
                 fontFamily = Helvetica
             )
             Text(
-                text = "₱${String.format("%,.0f", booking.totalAmount)}",
+                text = "â‚±${String.format("%,.0f", booking.totalAmount)}",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = Orange,
@@ -822,7 +822,7 @@ fun UserItem(user: User) {
                     fontFamily = Helvetica
                 )
                 Text(
-                    text = "${user.totalBookings} bookings • Joined ${user.registrationDate}",
+                    text = "${user.totalBookings} bookings â€¢ Joined ${user.registrationDate}",
                     fontSize = 10.sp,
                     color = Color.Gray,
                     fontFamily = Helvetica

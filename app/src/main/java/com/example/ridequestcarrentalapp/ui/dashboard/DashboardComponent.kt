@@ -32,7 +32,8 @@ import com.example.ridequestcarrentalapp.ui.theme.Orange
 @Composable
 fun TopBarSection(
     onProfileClick: () -> Unit,
-    onNotificationClick: () -> Unit
+    onNotificationClick: () -> Unit,
+    unreadNotificationCount: Int = 0
 ) {
     Row(
         modifier = Modifier
@@ -99,19 +100,21 @@ fun TopBarSection(
                     )
                 }
                 // Animated notification badge
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .background(Color.Red, CircleShape)
-                        .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "2",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (unreadNotificationCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .background(Color.Red, CircleShape)
+                            .align(Alignment.TopEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = unreadNotificationCount.toString(),
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

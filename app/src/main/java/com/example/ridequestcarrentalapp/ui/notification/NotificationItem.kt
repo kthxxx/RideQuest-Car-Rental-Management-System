@@ -55,7 +55,7 @@ fun NotificationsScreen(
     onNotificationSettingsClick: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
-    var notifications by remember { mutableStateOf(getSampleNotifications()) }
+    var notifications by remember { mutableStateOf(emptyList<NotificationItem>()) }
 
     val filters = listOf("All", "Bookings", "Payments", "Promotions", "System")
 

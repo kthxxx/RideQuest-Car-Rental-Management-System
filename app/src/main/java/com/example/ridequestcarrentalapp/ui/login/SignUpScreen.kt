@@ -9,7 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,29 +29,70 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ridequestcarrentalapp.R
+import com.example.ridequestcarrentalapp.data.firebase.AuthResult
+import com.example.ridequestcarrentalapp.data.firebase.FirebaseAuthManager
 import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import com.example.ridequestcarrentalapp.ui.theme.Orange
+import kotlinx.coroutines.launch
 
 @Composable
-fun SignUpScreen(
-    onSignUpClick: (String, String, String) -> Unit,
+fun FirebaseSignUpScreen(
+    authManager: FirebaseAuthManager,
+    onSignUpSuccess: () -> Unit,
     onLoginClick: () -> Unit,
-    onBackClick: () -> Unit,
-    onGoogleSignUpClick: () -> Unit = {},
-    onFacebookSignUpClick: () -> Unit = {}
+    onBackClick: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var agreeToTerms by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && email.isNotBlank() &&
-            password.isNotBlank() && agreeToTerms
+    val isFormValid = name.isNotBlank() &&
+            email.isNotBlank() &&
+            phone.isNotBlank() &&
+            password.length >= 6 &&
+            agreeToTerms
+
+    val coroutineScope = rememberCoroutineScope()
+
+    // Success Dialog
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = {
+                Text(
+                    "Account Created!",
+                    fontFamily = Helvetica,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Verification email sent! Please check your inbox and verify your email before signing in.",
+                    fontFamily = Helvetica
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+                        onLoginClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                ) {
+                    Text("Go to Sign In", fontFamily = Helvetica)
+                }
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -63,7 +106,7 @@ fun SignUpScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             // Logo
             Box(
@@ -74,16 +117,15 @@ fun SignUpScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.white_back_logo), // Use your white logo
+                    painter = painterResource(id = R.drawable.white_back_logo),
                     contentDescription = "RideQuest Logo",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.size(50.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Create Account Title
             Text(
                 text = "Create Account",
                 fontSize = 28.sp,
@@ -94,7 +136,6 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Subtitle
             Text(
                 text = "Sign up now and enjoy rental ease like\nnever before.",
                 fontSize = 14.sp,
@@ -104,16 +145,13 @@ fun SignUpScreen(
                 lineHeight = 20.sp
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Name Field
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.Start
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Name",
-                    fontSize = 16.sp,
+                    text = "Full Name",
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     fontFamily = Helvetica,
                     color = Color.Black,
@@ -122,16 +160,15 @@ fun SignUpScreen(
 
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
-                    placeholder = {
-                        Text(
-                            "Ex. Pia Vera",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
+                    onValueChange = {
+                        name = it
+                        errorMessage = null
                     },
+                    placeholder = { Text("Juan Dela Cruz", color = Color.Gray, fontSize = 14.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    enabled = !isLoading,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Orange,
                         unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
@@ -141,16 +178,13 @@ fun SignUpScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Email Field
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.Start
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Email",
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     fontFamily = Helvetica,
                     color = Color.Black,
@@ -159,17 +193,93 @@ fun SignUpScreen(
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
-                    placeholder = {
-                        Text(
-                            "example@gmail.com",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
+                    onValueChange = {
+                        email = it.trim()
+                        errorMessage = null
                     },
+                    placeholder = { Text("example@gmail.com", color = Color.Gray, fontSize = 14.sp) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    enabled = !isLoading,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Orange,
+                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
+                        unfocusedContainerColor = Color.Gray.copy(alpha = 0.05f),
+                        focusedContainerColor = Color.Gray.copy(alpha = 0.05f)
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Phone Field
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Phone Number",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = Helvetica,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = {
+                        phone = it
+                        errorMessage = null
+                    },
+                    placeholder = { Text("+63 912 345 6789", color = Color.Gray, fontSize = 14.sp) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    enabled = !isLoading,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Orange,
+                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
+                        unfocusedContainerColor = Color.Gray.copy(alpha = 0.05f),
+                        focusedContainerColor = Color.Gray.copy(alpha = 0.05f)
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Password Field
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Password",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = Helvetica,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        errorMessage = null
+                    },
+                    placeholder = { Text("Minimum 6 characters", color = Color.Gray, fontSize = 14.sp) },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            )
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    enabled = !isLoading,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Orange,
                         unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
@@ -180,45 +290,6 @@ fun SignUpScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
-            // Password Field
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = "Password",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = Helvetica,
-                    color = Color.Black,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    placeholder = {
-                        Text(
-                            "••••••••",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Orange,
-                        unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
-                        unfocusedContainerColor = Color.Gray.copy(alpha = 0.05f),
-                        focusedContainerColor = Color.Gray.copy(alpha = 0.05f)
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
 
             // Terms and Conditions
             Row(
@@ -229,37 +300,76 @@ fun SignUpScreen(
                     checked = agreeToTerms,
                     onCheckedChange = { agreeToTerms = it },
                     colors = CheckboxDefaults.colors(checkedColor = Orange),
-                    modifier = Modifier.padding(top = 2.dp)
+                    enabled = !isLoading
                 )
 
                 val annotatedText = buildAnnotatedString {
-                    append("Agree with ")
+                    append("I agree to the ")
                     withStyle(
                         style = SpanStyle(
                             color = Orange,
-                            textDecoration = TextDecoration.Underline
+                            textDecoration = TextDecoration.Underline,
+                            fontWeight = FontWeight.Medium
                         )
                     ) {
-                        append("Terms and Privacy Policies")
+                        append("Terms & Conditions")
+                    }
+                    append(" and ")
+                    withStyle(
+                        style = SpanStyle(
+                            color = Orange,
+                            textDecoration = TextDecoration.Underline,
+                            fontWeight = FontWeight.Medium
+                        )
+                    ) {
+                        append("Privacy Policy")
                     }
                 }
 
                 Text(
                     text = annotatedText,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontFamily = Helvetica,
                     color = Color.Gray,
-                    modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                    modifier = Modifier.padding(start = 8.dp, top = 12.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Error Message
+            errorMessage?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    fontFamily = Helvetica,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Sign Up Button
             Button(
                 onClick = {
-                    if (isFormValid) {
-                        onSignUpClick(name, email, password)
+                    coroutineScope.launch {
+                        isLoading = true
+                        errorMessage = null
+
+                        when (val result = authManager.signUp(name, email, phone, password)) {
+                            is AuthResult.Success -> {
+                                showSuccessDialog = true
+                            }
+                            is AuthResult.Error -> {
+                                errorMessage = result.message
+                            }
+                            is AuthResult.Loading -> {
+                                // Show loading
+                            }
+                        }
+
+                        isLoading = false
                     }
                 },
                 modifier = Modifier
@@ -270,79 +380,33 @@ fun SignUpScreen(
                     contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(28.dp),
-                enabled = isFormValid
+                enabled = isFormValid && !isLoading
             ) {
-                Text(
-                    text = "Sign Up",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = Helvetica
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Or sign in with
-            Text(
-                text = "Or sign in with",
-                color = Color.Gray,
-                fontSize = 14.sp,
-                fontFamily = Helvetica
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Social Media Buttons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Facebook Button
-                IconButton(
-                    onClick = { onFacebookSignUpClick() },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(
-                            Color(0xFF1877F2),
-                            CircleShape
-                        )
-                ) {
-                    Text(
-                        text = "f",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White
                     )
-                }
-
-                // Google Button
-                IconButton(
-                    onClick = { onGoogleSignUpClick() },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(
-                            Color.White,
-                            CircleShape
-                        )
-                ) {
+                } else {
                     Text(
-                        text = "G",
-                        color = Color(0xFF4285F4),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "Create Account",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = Helvetica
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Sign In Link
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 32.dp)
+                modifier = Modifier.padding(bottom = 24.dp)
             ) {
                 Text(
-                    text = "Already have account? ",
+                    text = "Already have an account? ",
                     color = Color.Gray,
                     fontSize = 14.sp,
                     fontFamily = Helvetica
@@ -353,7 +417,7 @@ fun SignUpScreen(
                     fontSize = 14.sp,
                     fontFamily = Helvetica,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { onLoginClick() }
+                    modifier = Modifier.clickable(enabled = !isLoading) { onLoginClick() }
                 )
             }
         }

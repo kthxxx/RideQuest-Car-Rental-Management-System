@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "921622162263",
+    "firebase_url": "https://ridequest-car-rental-app-default-rtdb.firebaseio.com",
     "project_id": "ridequest-car-rental-app",
     "storage_bucket": "ridequest-car-rental-app.firebasestorage.app"
   },

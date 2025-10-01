@@ -118,147 +118,165 @@ fun MainDashboard(
         CarCategory.ELECTRIC_HYBRID to "EV"
     )
 
-    LaunchedEffect(Unit) {
-        // Initial load happens in ViewModel init via loadData()
-    }
-
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color.White),
+        contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        // Enhanced Top Bar with better design
-        TopBarSection(
-            onProfileClick = onProfileClick,
-            onNotificationClick = onNotificationClick
-        )
+        // Enhanced Top Bar
+        item {
+            TopBarSection(
+                onProfileClick = onProfileClick,
+                onNotificationClick = onNotificationClick
+            )
+        }
 
-        // Enhanced Search Bar with more options
-        SearchBarSection(
-            searchCriteria = uiState.searchCriteria,
-            onSearchChange = { query ->
-                viewModel.updateSearchCriteria(
-                    uiState.searchCriteria.copy(query = query)
-                )
-            },
-            onFilterToggle = {
-                viewModel.toggleFilters()
-            }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        // Enhanced Search Bar
+        item {
+            SearchBarSection(
+                searchCriteria = uiState.searchCriteria,
+                onSearchChange = { query ->
+                    viewModel.updateSearchCriteria(
+                        uiState.searchCriteria.copy(query = query)
+                    )
+                },
+                onFilterToggle = {
+                    viewModel.toggleFilters()
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         // Categories Filter
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp)
-        ) {
-            items(categories) { (category, displayName) ->
-                CategoryChipEnhanced(
-                    category = displayName,
-                    isSelected = category == uiState.searchCriteria.category,
-                    onClick = {
-                        viewModel.updateSearchCriteria(
-                            uiState.searchCriteria.copy(category = category)
-                        )
-                        category?.let { onCategoryClick(it) }
-                    }
-                )
+        item {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp)
+            ) {
+                items(categories) { (category, displayName) ->
+                    CategoryChipEnhanced(
+                        category = displayName,
+                        isSelected = category == uiState.searchCriteria.category,
+                        onClick = {
+                            viewModel.updateSearchCriteria(
+                                uiState.searchCriteria.copy(category = category)
+                            )
+                            category?.let { onCategoryClick(it) }
+                        }
+                    )
+                }
             }
         }
 
         // Advanced Filters Section (collapsible)
         if (uiState.showFilters) {
-            AdvancedFiltersSection(
-                searchCriteria = uiState.searchCriteria,
-                brands = brands,
-                onCriteriaChange = { viewModel.updateSearchCriteria(it) },
-                onReset = { viewModel.resetFilters() }
-            )
+            item {
+                AdvancedFiltersSection(
+                    searchCriteria = uiState.searchCriteria,
+                    brands = brands,
+                    onCriteriaChange = { viewModel.updateSearchCriteria(it) },
+                    onReset = { viewModel.resetFilters() }
+                )
+            }
         }
 
         // Quick Stats Row
         if (uiState.searchCriteria.query.isEmpty() &&
             uiState.searchCriteria.category == null) {
-            QuickStatsSection(
-                totalCars = cars.size,
-                availableCars = cars.count { it.isAvailable },
-                featuredCount = featuredCars.size
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+            item {
+                QuickStatsSection(
+                    totalCars = cars.size,
+                    availableCars = cars.count { it.isAvailable },
+                    featuredCount = featuredCars.size
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
 
         // Featured Cars Section (if no search/filter applied)
         if (uiState.searchCriteria.query.isEmpty() &&
             uiState.searchCriteria.category == null &&
             featuredCars.isNotEmpty()) {
-            FeaturedCarsSection(
-                featuredCars = featuredCars,
-                onCarClick = onCarClick
-            )
-            Spacer(modifier = Modifier.height(20.dp))
+            item {
+                FeaturedCarsSection(
+                    featuredCars = featuredCars,
+                    onCarClick = onCarClick
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
         }
 
         // Loading state
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Orange)
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Orange)
+                }
             }
         } else {
             // Results header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${cars.size} cars available",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black,
-                    fontFamily = Helvetica
-                )
-
-                // Sort options
-                SortingChips(
-                    currentSort = uiState.searchCriteria.sortBy,
-                    onSortChange = { sortOption ->
-                        viewModel.updateSearchCriteria(
-                            uiState.searchCriteria.copy(sortBy = sortOption)
-                        )
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Cars Grid - Enhanced layout
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(cars) { car ->
-                    EnhancedCarCard(
-                        car = car,
-                        onClick = { onCarClick(car) }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${cars.size} cars available",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                    SortingChips(
+                        currentSort = uiState.searchCriteria.sortBy,
+                        onSortChange = { sortOption ->
+                            viewModel.updateSearchCriteria(
+                                uiState.searchCriteria.copy(sortBy = sortOption)
+                            )
+                        }
                     )
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Cars Grid - Enhanced layout
+            items(cars.chunked(2)) { rowCars ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    rowCars.forEach { car ->
+                        Box(modifier = Modifier.weight(1f)) {
+                            EnhancedCarCard(
+                                car = car,
+                                onClick = { onCarClick(car) }
+                            )
+                        }
+                    }
+                    if (rowCars.size < 2) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Empty state
             if (cars.isEmpty()) {
-                EmptyStateSection(
-                    onResetFilters = { viewModel.resetFilters() }
-                )
+                item {
+                    EmptyStateSection(
+                        onResetFilters = { viewModel.resetFilters() }
+                    )
+                }
             }
         }
     }
