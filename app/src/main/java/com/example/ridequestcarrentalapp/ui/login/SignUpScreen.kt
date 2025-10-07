@@ -29,19 +29,16 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview // Import for Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ridequestcarrentalapp.R
-import com.example.ridequestcarrentalapp.data.firebase.AuthResult
-import com.example.ridequestcarrentalapp.data.firebase.FirebaseAuthManager
 import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import com.example.ridequestcarrentalapp.ui.theme.Orange
-import kotlinx.coroutines.launch
 
 @Composable
-fun FirebaseSignUpScreen(
-    authManager: FirebaseAuthManager,
-    onSignUpSuccess: () -> Unit,
+fun SignUpScreen(
+    onSignUpClick: () -> Unit,
     onLoginClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
@@ -51,48 +48,12 @@ fun FirebaseSignUpScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var agreeToTerms by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showSuccessDialog by remember { mutableStateOf(false) }
 
     val isFormValid = name.isNotBlank() &&
             email.isNotBlank() &&
             phone.isNotBlank() &&
             password.length >= 6 &&
             agreeToTerms
-
-    val coroutineScope = rememberCoroutineScope()
-
-    // Success Dialog
-    if (showSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = {
-                Text(
-                    "Account Created!",
-                    fontFamily = Helvetica,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    "Verification email sent! Please check your inbox and verify your email before signing in.",
-                    fontFamily = Helvetica
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSuccessDialog = false
-                        onLoginClick()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Orange)
-                ) {
-                    Text("Go to Sign In", fontFamily = Helvetica)
-                }
-            }
-        )
-    }
 
     Box(
         modifier = Modifier
@@ -160,15 +121,11 @@ fun FirebaseSignUpScreen(
 
                 OutlinedTextField(
                     value = name,
-                    onValueChange = {
-                        name = it
-                        errorMessage = null
-                    },
+                    onValueChange = { name = it },
                     placeholder = { Text("Juan Dela Cruz", color = Color.Gray, fontSize = 14.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    enabled = !isLoading,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Orange,
                         unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
@@ -193,16 +150,12 @@ fun FirebaseSignUpScreen(
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = {
-                        email = it.trim()
-                        errorMessage = null
-                    },
+                    onValueChange = { email = it.trim() },
                     placeholder = { Text("example@gmail.com", color = Color.Gray, fontSize = 14.sp) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    enabled = !isLoading,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Orange,
                         unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
@@ -227,16 +180,12 @@ fun FirebaseSignUpScreen(
 
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = {
-                        phone = it
-                        errorMessage = null
-                    },
+                    onValueChange = { phone = it },
                     placeholder = { Text("+63 912 345 6789", color = Color.Gray, fontSize = 14.sp) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    enabled = !isLoading,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Orange,
                         unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
@@ -261,10 +210,7 @@ fun FirebaseSignUpScreen(
 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = {
-                        password = it
-                        errorMessage = null
-                    },
+                    onValueChange = { password = it },
                     placeholder = { Text("Minimum 6 characters", color = Color.Gray, fontSize = 14.sp) },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
@@ -279,7 +225,6 @@ fun FirebaseSignUpScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    enabled = !isLoading,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Orange,
                         unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f),
@@ -299,8 +244,7 @@ fun FirebaseSignUpScreen(
                 Checkbox(
                     checked = agreeToTerms,
                     onCheckedChange = { agreeToTerms = it },
-                    colors = CheckboxDefaults.colors(checkedColor = Orange),
-                    enabled = !isLoading
+                    colors = CheckboxDefaults.colors(checkedColor = Orange)
                 )
 
                 val annotatedText = buildAnnotatedString {
@@ -335,43 +279,11 @@ fun FirebaseSignUpScreen(
                 )
             }
 
-            // Error Message
-            errorMessage?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    fontFamily = Helvetica,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
             // Sign Up Button
             Button(
-                onClick = {
-                    coroutineScope.launch {
-                        isLoading = true
-                        errorMessage = null
-
-                        when (val result = authManager.signUp(name, email, phone, password)) {
-                            is AuthResult.Success -> {
-                                showSuccessDialog = true
-                            }
-                            is AuthResult.Error -> {
-                                errorMessage = result.message
-                            }
-                            is AuthResult.Loading -> {
-                                // Show loading
-                            }
-                        }
-
-                        isLoading = false
-                    }
-                },
+                onClick = { onSignUpClick() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -380,21 +292,14 @@ fun FirebaseSignUpScreen(
                     contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(28.dp),
-                enabled = isFormValid && !isLoading
+                enabled = isFormValid
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White
-                    )
-                } else {
-                    Text(
-                        text = "Create Account",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = Helvetica
-                    )
-                }
+                Text(
+                    text = "Create Account",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = Helvetica
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -417,9 +322,20 @@ fun FirebaseSignUpScreen(
                     fontSize = 14.sp,
                     fontFamily = Helvetica,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable(enabled = !isLoading) { onLoginClick() }
+                    modifier = Modifier.clickable { onLoginClick() }
                 )
             }
         }
     }
+}
+
+// Composable Preview
+@Preview(showBackground = true)
+@Composable
+fun SignUpScreenPreview() {
+    SignUpScreen(
+        onSignUpClick = { /* Do nothing for preview */ },
+        onLoginClick = { /* Do nothing for preview */ },
+        onBackClick = { /* Do nothing for preview */ }
+    )
 }

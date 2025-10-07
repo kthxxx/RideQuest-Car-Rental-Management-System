@@ -7,8 +7,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -19,7 +17,6 @@ import com.example.ridequestcarrentalapp.ui.feature.onbound.OnBoundScreen1
 import com.example.ridequestcarrentalapp.ui.feature.onbound.OnBoundScreen2
 import com.example.ridequestcarrentalapp.ui.feature.onbound.OnBoundScreen3
 import com.example.ridequestcarrentalapp.ui.feature.onbound.OnBoundScreen4
-import com.example.ridequestcarrentalapp.ui.authentication.AuthenticationManager
 
 class SecondActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,8 +24,6 @@ class SecondActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
-            val context = LocalContext.current
-            val authManager = remember { AuthenticationManager(context) }
 
             NavHost(
                 navController = navController,
@@ -68,38 +63,29 @@ class SecondActivity : ComponentActivity() {
                 // Auth Screens
                 composable("login") {
                     LoginScreen(
-                        authManager = authManager,
-                        onLoginClick = { email, password ->
+                        onLoginClick = {
                             // Handle successful login
                             Toast.makeText(this@SecondActivity, "Welcome back!", Toast.LENGTH_SHORT).show()
 
                             // Navigate to MainActivity after successful login
                             startActivity(Intent(this@SecondActivity, MainActivity::class.java))
                             finish()
-                        },
+                        } as (String, String) -> Unit,
                         onSignUpClick = {
                             navController.navigate("signup")
                         },
                         onForgotPasswordClick = {
                             Toast.makeText(this@SecondActivity, "Forgot Password clicked", Toast.LENGTH_SHORT).show()
                             // TODO: Implement forgot password functionality
-                        },
-                        onGoogleSignInClick = {
-                            Toast.makeText(this@SecondActivity, "Google Sign In clicked", Toast.LENGTH_SHORT).show()
-                            // TODO: Implement Google Sign In
-                        },
-                        onFacebookSignInClick = {
-                            Toast.makeText(this@SecondActivity, "Facebook Sign In clicked", Toast.LENGTH_SHORT).show()
-                            // TODO: Implement Facebook Sign In
                         }
                     )
                 }
 
                 composable("signup") {
                     SignUpScreen(
-                        onSignUpClick = { name, email, password ->
-                            // Handle sign up logic here
-                            Toast.makeText(this@SecondActivity, "Account created for $name", Toast.LENGTH_SHORT).show()
+                        onSignUpClick = {
+                            // Handle successful sign up
+                            Toast.makeText(this@SecondActivity, "Account created successfully!", Toast.LENGTH_SHORT).show()
 
                             // Navigate back to login after successful registration
                             navController.navigate("login") {
@@ -113,14 +99,6 @@ class SecondActivity : ComponentActivity() {
                         },
                         onBackClick = {
                             navController.popBackStack()
-                        },
-                        onGoogleSignUpClick = {
-                            Toast.makeText(this@SecondActivity, "Google Sign Up clicked", Toast.LENGTH_SHORT).show()
-                            // TODO: Implement Google Sign Up
-                        },
-                        onFacebookSignUpClick = {
-                            Toast.makeText(this@SecondActivity, "Facebook Sign Up clicked", Toast.LENGTH_SHORT).show()
-                            // TODO: Implement Facebook Sign Up
                         }
                     )
                 }

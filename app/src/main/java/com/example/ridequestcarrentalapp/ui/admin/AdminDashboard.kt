@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -18,110 +17,57 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import com.example.ridequestcarrentalapp.ui.theme.Orange
+import java.text.SimpleDateFormat
+import java.util.*
 
-// Data classes for admin management
-data class AdminStats(
-    val totalUsers: Int,
-    val totalBookings: Int,
-    val totalSubscribers: Int,
-    val totalQueries: Int,
-    val totalVehicles: Int,
-    val activeBookings: Int,
-    val revenue: Double,
-    val testimonials: Int
+// Data Models
+data class StatCard(
+    val title: String,
+    val value: String,
+    val icon: ImageVector,
+    val color: Color
 )
 
-data class VehicleBrand(
-    val id: String,
-    val name: String,
-    val logo: String,
-    val vehicleCount: Int,
-    val isActive: Boolean
-)
-
-data class Vehicle(
-    val id: String,
-    val brand: String,
-    val model: String,
-    val year: Int,
-    val pricePerDay: Double,
-    val seats: Int,
-    val fuelType: String,
-    val transmission: String,
-    val isAvailable: Boolean,
-    val category: String,
-    val images: List<String> = emptyList()
-)
-
-data class Booking(
-    val id: String,
-    val userId: String,
+data class BookingItem(
+    val id: Long,
     val userName: String,
-    val vehicleId: String,
-    val vehicleName: String,
-    val startDate: String,
-    val endDate: String,
+    val carName: String,
+    val pickupDate: String,
+    val returnDate: String,
     val totalAmount: Double,
     val status: BookingStatus,
-    val bookingDate: String
+    val paymentStatus: PaymentStatus
 )
 
-enum class BookingStatus {
-    PENDING, CONFIRMED, CANCELLED, COMPLETED
+enum class BookingStatus(val displayName: String, val color: Color) {
+    PENDING("Pending", Color(0xFFFF9800)),
+    CONFIRMED("Confirmed", Color(0xFF4CAF50)),
+    ONGOING("Ongoing", Color(0xFF2196F3)),
+    COMPLETED("Completed", Color(0xFF009688)),
+    CANCELLED("Cancelled", Color(0xFFF44336))
 }
 
-data class Testimonial(
-    val id: String,
-    val userId: String,
-    val userName: String,
-    val userImage: String,
-    val rating: Float,
-    val comment: String,
-    val date: String,
-    val isActive: Boolean
-)
-
-data class ContactQuery(
-    val id: String,
-    val name: String,
-    val email: String,
-    val phone: String,
-    val subject: String,
-    val message: String,
-    val date: String,
-    val isResolved: Boolean
-)
-
-data class User(
-    val id: String,
-    val name: String,
-    val email: String,
-    val phone: String,
-    val registrationDate: String,
-    val totalBookings: Int,
-    val isActive: Boolean
-)
-
-data class Subscriber(
-    val id: String,
-    val email: String,
-    val subscriptionDate: String,
-    val isActive: Boolean
-)
+enum class PaymentStatus(val displayName: String, val color: Color) {
+    PENDING("Pending", Color(0xFFFF9800)),
+    PAID("Paid", Color(0xFF4CAF50)),
+    REFUNDED("Refunded", Color(0xFF9C27B0)),
+    FAILED("Failed", Color(0xFFF44336))
+}
 
 @SuppressLint("AutoboxingStateCreation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboard(
+    bookings: List<BookingItem> = emptyList(),
     onManageBrandsClick: () -> Unit = {},
     onPostVehicleClick: () -> Unit = {},
     onManageVehiclesClick: () -> Unit = {},
@@ -132,23 +78,12 @@ fun AdminDashboard(
     onManageContentClick: () -> Unit = {},
     onManageSubscribersClick: () -> Unit = {},
     onChangePasswordClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {}
+    onLogoutClick: () -> Unit = {},
+    onUpdateBookingStatus: (Long, BookingStatus) -> Unit = { _, _ -> }
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val tabs = listOf("Dashboard", "Vehicles", "Bookings", "Users", "Settings")
-
-    // Sample admin stats
-    val adminStats = AdminStats(
-        totalUsers = 1247,
-        totalBookings = 3892,
-        totalSubscribers = 756,
-        totalQueries = 89,
-        totalVehicles = 43,
-        activeBookings = 156,
-        revenue = 2847500.0,
-        testimonials = 234
-    )
 
     Column(
         modifier = Modifier
@@ -240,13 +175,17 @@ fun AdminDashboard(
 
         // Tab Content
         when (selectedTab) {
-            0 -> DashboardOverview(adminStats)
+            0 -> DashboardOverview(bookings = bookings)
             1 -> VehicleManagement(
                 onManageBrandsClick = onManageBrandsClick,
                 onPostVehicleClick = onPostVehicleClick,
                 onManageVehiclesClick = onManageVehiclesClick
             )
-            2 -> BookingManagement(onManageBookingsClick)
+            2 -> BookingManagement(
+                bookings = bookings,
+                onManageBookingsClick = onManageBookingsClick,
+                onUpdateBookingStatus = onUpdateBookingStatus
+            )
             3 -> UserManagement(
                 onManageUsersClick = onManageUsersClick,
                 onManageSubscribersClick = onManageSubscribersClick
@@ -261,7 +200,13 @@ fun AdminDashboard(
 }
 
 @Composable
-fun DashboardOverview(stats: AdminStats) {
+fun DashboardOverview(bookings: List<BookingItem> = emptyList()) {
+    val totalBookings = bookings.size
+    val activeBookings = bookings.count { it.status == BookingStatus.CONFIRMED || it.status == BookingStatus.ONGOING }
+    val pendingBookings = bookings.count { it.status == BookingStatus.PENDING }
+    val completedBookings = bookings.count { it.status == BookingStatus.COMPLETED }
+    val totalRevenue = bookings.filter { it.paymentStatus == PaymentStatus.PAID }.sumOf { it.totalAmount }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -287,14 +232,14 @@ fun DashboardOverview(stats: AdminStats) {
             ) {
                 items(
                     listOf(
-                        StatCard("Total Users", stats.totalUsers.toString(), Icons.Default.People, Color(0xFF4CAF50)),
-                        StatCard("Total Bookings", stats.totalBookings.toString(), Icons.Default.BookOnline, Color(0xFF2196F3)),
-                        StatCard("Active Bookings", stats.activeBookings.toString(), Icons.Default.EventAvailable, Orange),
-                        StatCard("Total Vehicles", stats.totalVehicles.toString(), Icons.Default.DirectionsCar, Color(0xFF9C27B0)),
-                        StatCard("Subscribers", stats.totalSubscribers.toString(), Icons.Default.Email, Color(0xFFFF9800)),
-                        StatCard("Queries", stats.totalQueries.toString(), Icons.Default.ContactSupport, Color(0xFFF44336)),
-                        StatCard("Revenue", "â‚±${String.format("%,.0f", stats.revenue)}", Icons.Default.AttachMoney, Color(0xFF009688)),
-                        StatCard("Testimonials", stats.testimonials.toString(), Icons.Default.Star, Color(0xFFFFEB3B))
+                        StatCard("Total Bookings", "$totalBookings", Icons.Default.BookOnline, Color(0xFF2196F3)),
+                        StatCard("Active Bookings", "$activeBookings", Icons.Default.EventAvailable, Orange),
+                        StatCard("Pending", "$pendingBookings", Icons.Default.HourglassEmpty, Color(0xFFFF9800)),
+                        StatCard("Completed", "$completedBookings", Icons.Default.CheckCircle, Color(0xFF4CAF50)),
+                        StatCard("Revenue", "₱${String.format("%,.2f", totalRevenue)}", Icons.Default.AttachMoney, Color(0xFF009688)),
+                        StatCard("Avg. Booking", if (totalBookings > 0) "₱${String.format("%,.0f", totalRevenue / totalBookings)}" else "₱0", Icons.Default.TrendingUp, Color(0xFF9C27B0)),
+                        StatCard("Total Vehicles", "0", Icons.Default.DirectionsCar, Color(0xFF673AB7)),
+                        StatCard("Users", "0", Icons.Default.People, Color(0xFF4CAF50))
                     )
                 ) { statCard ->
                     StatCardItem(statCard)
@@ -304,7 +249,7 @@ fun DashboardOverview(stats: AdminStats) {
 
         item {
             Text(
-                text = "Recent Activity",
+                text = "Recent Bookings",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
@@ -313,23 +258,478 @@ fun DashboardOverview(stats: AdminStats) {
             )
         }
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+        if (bookings.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    RecentActivityItem("New booking from Juan Dela Cruz", "2 minutes ago", Icons.Default.BookOnline)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    RecentActivityItem("Vehicle Toyota Vios posted", "15 minutes ago", Icons.Default.DirectionsCar)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    RecentActivityItem("New user registration", "1 hour ago", Icons.Default.PersonAdd)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    RecentActivityItem("Contact query received", "3 hours ago", Icons.Default.ContactSupport)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.BookOnline,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = Color.Gray.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "No bookings yet",
+                                fontSize = 14.sp,
+                                color = Color.Gray,
+                                fontFamily = Helvetica,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
+            }
+        } else {
+            items(bookings.take(5)) { booking ->
+                BookingCard(booking = booking, onClick = {})
+            }
+        }
+    }
+}
+
+@Composable
+fun BookingManagement(
+    bookings: List<BookingItem> = emptyList(),
+    onManageBookingsClick: () -> Unit,
+    onUpdateBookingStatus: (Long, BookingStatus) -> Unit
+) {
+    var selectedFilter by remember { mutableStateOf("All") }
+    val filters = listOf("All", "Pending", "Confirmed", "Ongoing", "Completed", "Cancelled")
+
+    val filteredBookings = if (selectedFilter == "All") {
+        bookings
+    } else {
+        bookings.filter { it.status.displayName == selectedFilter }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Booking Management",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    fontFamily = Helvetica
+                )
+
+                Text(
+                    text = "${filteredBookings.size} bookings",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    fontFamily = Helvetica
+                )
+            }
+        }
+
+        // Filter Chips
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                filters.forEach { filter ->
+                    FilterChip(
+                        selected = selectedFilter == filter,
+                        onClick = { selectedFilter = filter },
+                        label = {
+                            Text(
+                                text = filter,
+                                fontSize = 12.sp,
+                                fontFamily = Helvetica
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Orange,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+            }
+        }
+
+        if (filteredBookings.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.BookOnline,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = Color.Gray.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "No $selectedFilter bookings",
+                                fontSize = 14.sp,
+                                color = Color.Gray,
+                                fontFamily = Helvetica,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            items(filteredBookings) { booking ->
+                BookingCardWithActions(
+                    booking = booking,
+                    onUpdateStatus = { newStatus ->
+                        onUpdateBookingStatus(booking.id, newStatus)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BookingCard(
+    booking: BookingItem,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = booking.carName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                    Text(
+                        text = booking.userName,
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Surface(
+                        color = booking.status.color.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = booking.status.displayName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = booking.status.color,
+                            fontFamily = Helvetica,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Pickup",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                    Text(
+                        text = booking.pickupDate,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = null,
+                    tint = Orange,
+                    modifier = Modifier.size(20.dp)
+                )
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Return",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                    Text(
+                        text = booking.returnDate,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Divider(color = Color.Gray.copy(alpha = 0.2f))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Payment,
+                        contentDescription = null,
+                        tint = booking.paymentStatus.color,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = booking.paymentStatus.displayName,
+                        fontSize = 12.sp,
+                        color = booking.paymentStatus.color,
+                        fontFamily = Helvetica
+                    )
+                }
+
+                Text(
+                    text = "₱${String.format("%,.2f", booking.totalAmount)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Orange,
+                    fontFamily = Helvetica
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BookingCardWithActions(
+    booking: BookingItem,
+    onUpdateStatus: (BookingStatus) -> Unit
+) {
+    var showStatusMenu by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Booking #${booking.id}",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                    Text(
+                        text = booking.carName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                    Text(
+                        text = booking.userName,
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                }
+
+                Box {
+                    Surface(
+                        color = booking.status.color.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.clickable { showStatusMenu = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = booking.status.displayName,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = booking.status.color,
+                                fontFamily = Helvetica
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Change Status",
+                                tint = booking.status.color,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showStatusMenu,
+                        onDismissRequest = { showStatusMenu = false }
+                    ) {
+                        BookingStatus.values().forEach { status ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(12.dp)
+                                                .background(status.color, CircleShape)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = status.displayName,
+                                            fontFamily = Helvetica
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    onUpdateStatus(status)
+                                    showStatusMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Pickup",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                    Text(
+                        text = booking.pickupDate,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = null,
+                    tint = Orange,
+                    modifier = Modifier.size(20.dp)
+                )
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Return",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                    Text(
+                        text = booking.returnDate,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black,
+                        fontFamily = Helvetica
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Divider(color = Color.Gray.copy(alpha = 0.2f))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Payment,
+                        contentDescription = null,
+                        tint = booking.paymentStatus.color,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = booking.paymentStatus.displayName,
+                        fontSize = 12.sp,
+                        color = booking.paymentStatus.color,
+                        fontFamily = Helvetica
+                    )
+                }
+
+                Text(
+                    text = "₱${String.format("%,.2f", booking.totalAmount)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Orange,
+                    fontFamily = Helvetica
+                )
             }
         }
     }
@@ -392,65 +792,6 @@ fun VehicleManagement(
                 modifier = Modifier.fillMaxWidth()
             )
         }
-
-        item {
-            Text(
-                text = "Vehicle Brands",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                fontFamily = Helvetica
-            )
-        }
-
-        items(getSampleBrands()) { brand ->
-            BrandItem(brand)
-        }
-    }
-}
-
-@Composable
-fun BookingManagement(onManageBookingsClick: () -> Unit) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Text(
-                text = "Booking Management",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                fontFamily = Helvetica
-            )
-        }
-
-        item {
-            ManagementCard(
-                title = "Manage Bookings",
-                description = "Confirm, cancel, or view all bookings",
-                icon = Icons.Default.BookOnline,
-                color = Orange,
-                onClick = onManageBookingsClick,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        item {
-            Text(
-                text = "Recent Bookings",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                fontFamily = Helvetica
-            )
-        }
-
-        items(getSampleBookings()) { booking ->
-            BookingItem(booking)
-        }
     }
 }
 
@@ -498,20 +839,6 @@ fun UserManagement(
                     modifier = Modifier.weight(1f)
                 )
             }
-        }
-
-        item {
-            Text(
-                text = "Recent Users",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                fontFamily = Helvetica
-            )
-        }
-
-        items(getSampleUsers()) { user ->
-            UserItem(user)
         }
     }
 }
@@ -603,7 +930,8 @@ fun StatCardItem(statCard: StatCard) {
                 text = statCard.title,
                 fontSize = 12.sp,
                 color = Color.Gray,
-                fontFamily = Helvetica
+                fontFamily = Helvetica,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -658,226 +986,41 @@ fun ManagementCard(
     }
 }
 
-@Composable
-fun RecentActivityItem(text: String, time: String, icon: ImageVector) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
-            tint = Orange,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = text,
-                fontSize = 14.sp,
-                color = Color.Black,
-                fontFamily = Helvetica
-            )
-            Text(
-                text = time,
-                fontSize = 12.sp,
-                color = Color.Gray,
-                fontFamily = Helvetica
-            )
-        }
-    }
-}
-
-@Composable
-fun BrandItem(brand: VehicleBrand) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = brand.name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                fontFamily = Helvetica,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = "${brand.vehicleCount} vehicles",
-                fontSize = 12.sp,
-                color = Color.Gray,
-                fontFamily = Helvetica
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (brand.isActive) Color.Green.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f),
-                        RoundedCornerShape(6.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = if (brand.isActive) "Active" else "Inactive",
-                    fontSize = 10.sp,
-                    color = if (brand.isActive) Color.Green else Color.Red,
-                    fontFamily = Helvetica
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun BookingItem(booking: Booking) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = booking.userName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black,
-                    fontFamily = Helvetica
-                )
-                Box(
-                    modifier = Modifier
-                        .background(
-                            when (booking.status) {
-                                BookingStatus.PENDING -> Orange.copy(alpha = 0.1f)
-                                BookingStatus.CONFIRMED -> Color.Green.copy(alpha = 0.1f)
-                                BookingStatus.CANCELLED -> Color.Red.copy(alpha = 0.1f)
-                                BookingStatus.COMPLETED -> Color.Blue.copy(alpha = 0.1f)
-                            },
-                            RoundedCornerShape(6.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = booking.status.name,
-                        fontSize = 10.sp,
-                        color = when (booking.status) {
-                            BookingStatus.PENDING -> Orange
-                            BookingStatus.CONFIRMED -> Color.Green
-                            BookingStatus.CANCELLED -> Color.Red
-                            BookingStatus.COMPLETED -> Color.Blue
-                        },
-                        fontFamily = Helvetica
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "${booking.vehicleName} â€¢ ${booking.startDate} to ${booking.endDate}",
-                fontSize = 12.sp,
-                color = Color.Gray,
-                fontFamily = Helvetica
-            )
-            Text(
-                text = "â‚±${String.format("%,.0f", booking.totalAmount)}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = Orange,
-                fontFamily = Helvetica
-            )
-        }
-    }
-}
-
-@Composable
-fun UserItem(user: User) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = user.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black,
-                    fontFamily = Helvetica
-                )
-                Text(
-                    text = user.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    fontFamily = Helvetica
-                )
-                Text(
-                    text = "${user.totalBookings} bookings â€¢ Joined ${user.registrationDate}",
-                    fontSize = 10.sp,
-                    color = Color.Gray,
-                    fontFamily = Helvetica
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (user.isActive) Color.Green.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f),
-                        RoundedCornerShape(6.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = if (user.isActive) "Active" else "Inactive",
-                    fontSize = 10.sp,
-                    color = if (user.isActive) Color.Green else Color.Red,
-                    fontFamily = Helvetica
-                )
-            }
-        }
-    }
-}
-
-// Sample Data Functions
-fun getSampleBrands(): List<VehicleBrand> = listOf(
-    VehicleBrand("1", "Toyota", "", 12, true),
-    VehicleBrand("2", "Honda", "", 8, true),
-    VehicleBrand("3", "Nissan", "", 6, true),
-    VehicleBrand("4", "Mitsubishi", "", 5, true),
-    VehicleBrand("5", "Ford", "", 4, true),
-    VehicleBrand("6", "BMW", "", 3, false)
-)
-
-fun getSampleBookings(): List<Booking> = listOf(
-    Booking("1", "u1", "Juan Dela Cruz", "v1", "Toyota Vios", "2024-03-15", "2024-03-18", 5400.0, BookingStatus.PENDING, "2024-03-10"),
-    Booking("2", "u2", "Maria Santos", "v2", "Honda CR-V", "2024-03-20", "2024-03-25", 17500.0, BookingStatus.CONFIRMED, "2024-03-12"),
-    Booking("3", "u3", "Jose Rizal", "v3", "BMW 3 Series", "2024-03-12", "2024-03-14", 13000.0, BookingStatus.COMPLETED, "2024-03-08")
-)
-
-fun getSampleUsers(): List<User> = listOf(
-    User("1", "Juan Dela Cruz", "juan@email.com", "+63 912 345 6789", "2024-01-15", 5, true),
-    User("2", "Maria Santos", "maria@email.com", "+63 998 765 4321", "2024-02-10", 3, true),
-    User("3", "Jose Rizal", "jose@email.com", "+63 917 123 4567", "2024-03-01", 1, true)
-)
-
-data class StatCard(
-    val title: String,
-    val value: String,
-    val icon: ImageVector,
-    val color: Color
-)
-
 @Preview(showBackground = true)
 @Composable
 fun AdminDashboardPreview() {
-    AdminDashboard()
+    val sampleBookings = listOf(
+        BookingItem(
+            id = 1,
+            userName = "Juan Dela Cruz",
+            carName = "Toyota Fortuner",
+            pickupDate = "Dec 15, 2024",
+            returnDate = "Dec 20, 2024",
+            totalAmount = 22500.0,
+            status = BookingStatus.CONFIRMED,
+            paymentStatus = PaymentStatus.PAID
+        ),
+        BookingItem(
+            id = 2,
+            userName = "Maria Santos",
+            carName = "Honda CR-V",
+            pickupDate = "Dec 18, 2024",
+            returnDate = "Dec 22, 2024",
+            totalAmount = 14000.0,
+            status = BookingStatus.PENDING,
+            paymentStatus = PaymentStatus.PENDING
+        ),
+        BookingItem(
+            id = 3,
+            userName = "Pedro Reyes",
+            carName = "Toyota Vios",
+            pickupDate = "Dec 10, 2024",
+            returnDate = "Dec 14, 2024",
+            totalAmount = 7200.0,
+            status = BookingStatus.COMPLETED,
+            paymentStatus = PaymentStatus.PAID
+        )
+    )
+
+    AdminDashboard(bookings = sampleBookings)
 }
