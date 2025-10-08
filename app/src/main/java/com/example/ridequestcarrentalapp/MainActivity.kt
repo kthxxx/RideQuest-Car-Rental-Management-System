@@ -6,8 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TopAppBar
@@ -15,21 +19,34 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ridequestcarrentalapp.data.CarRepositoryFactory
 import com.example.ridequestcarrentalapp.ui.dashboard.EnhancedMainDashboard
 import com.example.ridequestcarrentalapp.ui.detail.CarDetailScreen
 import com.example.ridequestcarrentalapp.ui.booking.BookingFlowScreen
-import com.example.ridequestcarrentalapp.ui.map.MapViewScreen
+import com.example.ridequestcarrentalapp.ui.profile.ProfileScreen
+import com.example.ridequestcarrentalapp.ui.profile.UserProfile
+import com.example.ridequestcarrentalapp.ui.profile.UserBooking
+import com.example.ridequestcarrentalapp.ui.profile.VerificationStatus
+import com.example.ridequestcarrentalapp.ui.profile.MembershipTier
+import com.example.ridequestcarrentalapp.ui.admin.BookingStatus
 import com.example.ridequestcarrentalapp.ui.theme.RideQuestCarRentalAppTheme
 import com.example.ridequestcarrentalapp.ui.theme.Orange
+import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -65,27 +82,19 @@ fun RideQuestApp() {
                             navController.navigate("car_detail/${car.id}")
                         },
                         onProfileClick = {
-                            // Navigate to profile screen or show profile dialog
                             Toast.makeText(context, "Profile feature coming soon!", Toast.LENGTH_SHORT).show()
                         },
                         onNotificationClick = {
-                            // Navigate to notifications screen
                             Toast.makeText(context, "Notifications feature coming soon!", Toast.LENGTH_SHORT).show()
                         },
                         onCategoryClick = { category ->
-                            // Handle category filtering - this is already handled in the dashboard
                             println("Category clicked: ${category.displayName}")
                         },
                         onBrandClick = { brand ->
-                            // Handle brand filtering - this is already handled in the dashboard
                             println("Brand clicked: $brand")
                         },
-                        onQuickBookClick = {
-                            // Navigate to quick booking or show quick booking dialog
-                            navController.navigate("quick_book")
-                        },
                         onMapViewClick = {
-                            navController.navigate("map_view")
+                            Toast.makeText(context, "Map view coming soon!", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -112,21 +121,11 @@ fun RideQuestApp() {
             )
         }
 
-        // Quick booking route - can be implemented later
         composable("quick_book") {
             QuickBookScreen(
+                repository = repository,
                 onBackClick = { navController.popBackStack() },
                 onCarSelected = { car ->
-                    navController.navigate("car_detail/${car.id}")
-                }
-            )
-        }
-
-        // Map view route
-        composable("map_view") {
-            MapViewScreen(
-                onBackClick = { navController.popBackStack() },
-                onCarClick = { car ->
                     navController.navigate("car_detail/${car.id}")
                 }
             )
@@ -233,7 +232,19 @@ private fun BookingFlowWithLoading(
         car != null -> {
             BookingFlowScreen(
                 car = car!!,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onConfirmBookingClick = { bookingDetails ->
+                    // TODO: Save booking to backend
+                    Toast.makeText(context, "Booking confirmed for ${bookingDetails.car.name}!", Toast.LENGTH_LONG).show()
+                    // Navigate back to dashboard
+                    navController.navigate("dashboard") {
+                        popUpTo("dashboard") { inclusive = true }
+                    }
+                },
+                onLocationClick = { location ->
+                    // TODO: Open map view for location selection
+                    Toast.makeText(context, "Location: $location", Toast.LENGTH_SHORT).show()
+                }
             )
         }
     }
@@ -242,17 +253,16 @@ private fun BookingFlowWithLoading(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuickBookScreen(
+    repository: com.example.ridequestcarrentalapp.data.CarRepository,
     onBackClick: () -> Unit,
     onCarSelected: (Car) -> Unit
 ) {
-    val repository = remember { CarRepositoryFactory.create() }
     var availableCars by remember { mutableStateOf<List<Car>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         try {
             isLoading = true
-            // Get available cars for quick booking
             availableCars = repository.getAllCars().filter { it.isAvailable }
         } catch (e: Exception) {
             // Handle error
@@ -261,11 +271,10 @@ private fun QuickBookScreen(
         }
     }
 
-    // For now, just show a placeholder
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Quick Book") },
+                title = { Text("Quick Book", fontFamily = Helvetica) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -283,14 +292,88 @@ private fun QuickBookScreen(
                 .padding(paddingValues),
             contentAlignment = Alignment.Center
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(color = Orange)
-            } else {
-                Text(
-                    text = "Quick Book feature coming soon!\n${availableCars.size} cars available",
-                    textAlign = TextAlign.Center
-                )
+            when {
+                isLoading -> {
+                    CircularProgressIndicator(color = Orange)
+                }
+                availableCars.isEmpty() -> {
+                    EmptyQuickBookState(onBrowseCars = onBackClick)
+                }
+                else -> {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DirectionsCar,
+                            contentDescription = null,
+                            tint = Orange,
+                            modifier = Modifier.size(80.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Quick Book",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            fontFamily = Helvetica
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${availableCars.size} cars available for instant booking",
+                            fontSize = 16.sp,
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center,
+                            fontFamily = Helvetica
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = onBackClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                        ) {
+                            Text("Browse Available Cars", fontFamily = Helvetica)
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyQuickBookState(onBrowseCars: () -> Unit) {
+    Column(
+        modifier = Modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.DirectionsCar,
+            contentDescription = null,
+            tint = Color.Gray.copy(alpha = 0.3f),
+            modifier = Modifier.size(100.dp)
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "No Cars Available",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            fontFamily = Helvetica
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "All cars are currently booked.\nCheck back later or browse our full fleet.",
+            fontSize = 16.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center,
+            fontFamily = Helvetica
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = onBrowseCars,
+            colors = ButtonDefaults.buttonColors(containerColor = Orange)
+        ) {
+            Text("Browse All Cars", fontFamily = Helvetica)
         }
     }
 }
@@ -300,5 +383,13 @@ private fun QuickBookScreen(
 fun AppNavigationPreview() {
     RideQuestCarRentalAppTheme {
         RideQuestApp()
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun EmptyQuickBookPreview() {
+    RideQuestCarRentalAppTheme {
+        EmptyQuickBookState(onBrowseCars = {})
     }
 }

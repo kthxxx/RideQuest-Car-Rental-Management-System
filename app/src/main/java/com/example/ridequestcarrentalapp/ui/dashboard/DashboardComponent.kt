@@ -871,50 +871,6 @@ fun BrandChip(
     }
 }
 
-@Composable
-fun FloatingActionSection(
-    onQuickBookClick: () -> Unit = {},
-    onMapViewClick: () -> Unit = {}
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Bottom,
-        horizontalAlignment = Alignment.End
-    ) {
-        // Map view FAB
-        FloatingActionButton(
-            onClick = onMapViewClick,
-            containerColor = Color.White,
-            contentColor = Orange,
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Map,
-                contentDescription = "Map View",
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Quick book FAB
-        ExtendedFloatingActionButton(
-            onClick = onQuickBookClick,
-            containerColor = Orange,
-            contentColor = Color.White,
-            text = { Text("Quick Book", fontSize = 14.sp, fontWeight = FontWeight.Medium) },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Speed,
-                    contentDescription = "Quick Book",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        )
-    }
-}
 
 // Enhanced MainDashboard with FABs and bottom navigation space
 @OptIn(ExperimentalMaterial3Api::class)
@@ -940,10 +896,5 @@ fun EnhancedMainDashboard(
             viewModel = viewModel
         )
 
-        // Floating action buttons
-        FloatingActionSection(
-            onQuickBookClick = onQuickBookClick,
-            onMapViewClick = onMapViewClick
-        )
     }
 }
