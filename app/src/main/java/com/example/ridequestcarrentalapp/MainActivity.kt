@@ -1,5 +1,6 @@
 package com.example.ridequestcarrentalapp
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -52,6 +53,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavController
 import com.example.ridequestcarrentalapp.data.Car
+import com.example.ridequestcarrentalapp.R
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +73,61 @@ fun RideQuestApp() {
     val repository = remember { CarRepositoryFactory.create() }
     val context = LocalContext.current
 
+    // Sample user profile data
+    val sampleUserProfile = remember {
+        UserProfile(
+            id = "user123",
+            name = "Joshua Miguel Jamisola",
+            email = "joshua@ridequest.com",
+            phone = "+63 912 345 6789",
+            memberSince = "January 2024",
+            totalBookings = 12,
+            favoriteLocations = listOf("Cebu City", "Mactan Airport", "IT Park"),
+            verificationStatus = VerificationStatus.VERIFIED,
+            loyaltyPoints = 1850,
+            membershipTier = MembershipTier.SILVER
+        )
+    }
+
+    // Sample bookings data
+    val sampleBookings = remember {
+        listOf(
+            UserBooking(
+                id = "booking1",
+                carName = "Toyota Vios",
+                carImage = R.drawable.white_back_logo,
+                pickupDate = "Oct 10, 2024",
+                returnDate = "Oct 13, 2024",
+                location = "Cebu City",
+                totalAmount = 5400.0,
+                status = BookingStatus.CONFIRMED,
+                bookingDate = "Oct 08, 2024"
+            ),
+            UserBooking(
+                id = "booking2",
+                carName = "Honda CR-V",
+                carImage = R.drawable.white_back_logo,
+                pickupDate = "Sep 25, 2024",
+                returnDate = "Sep 28, 2024",
+                location = "Mactan Airport",
+                totalAmount = 8100.0,
+                status = BookingStatus.COMPLETED,
+                bookingDate = "Sep 20, 2024"
+            ),
+            UserBooking(
+                id = "booking3",
+                carName = "Mitsubishi Xpander",
+                carImage = R.drawable.white_back_logo,
+                pickupDate = "Sep 15, 2024",
+                returnDate = "Sep 18, 2024",
+                location = "IT Park",
+                totalAmount = 7500.0,
+                status = BookingStatus.COMPLETED,
+                bookingDate = "Sep 10, 2024"
+            )
+        )
+    }
+
     NavHost(navController = navController, startDestination = "dashboard") {
         composable("dashboard") {
             Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -82,10 +139,10 @@ fun RideQuestApp() {
                             navController.navigate("car_detail/${car.id}")
                         },
                         onProfileClick = {
-                            Toast.makeText(context, "Profile feature coming soon!", Toast.LENGTH_SHORT).show()
+                            navController.navigate("profile")
                         },
                         onNotificationClick = {
-                            Toast.makeText(context, "Notifications feature coming soon!", Toast.LENGTH_SHORT).show()
+                            navController.navigate("notification")
                         },
                         onCategoryClick = { category ->
                             println("Category clicked: ${category.displayName}")
@@ -99,6 +156,45 @@ fun RideQuestApp() {
                     )
                 }
             }
+        }
+
+        composable("profile") {
+            ProfileScreen(
+                userProfile = sampleUserProfile,
+                recentBookings = sampleBookings,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onEditProfileClick = {
+                    Toast.makeText(context, "Edit profile feature coming soon!", Toast.LENGTH_SHORT).show()
+                },
+                onBookingHistoryClick = {
+                    Toast.makeText(context, "Booking history feature coming soon!", Toast.LENGTH_SHORT).show()
+                },
+                onPaymentMethodsClick = {
+                    Toast.makeText(context, "Payment methods feature coming soon!", Toast.LENGTH_SHORT).show()
+                },
+                onNotificationsClick = {
+                    Toast.makeText(context, "Notifications settings coming soon!", Toast.LENGTH_SHORT).show()
+                },
+                onHelpSupportClick = {
+                    Toast.makeText(context, "Help & Support feature coming soon!", Toast.LENGTH_SHORT).show()
+                },
+                onSettingsClick = {
+                    Toast.makeText(context, "Settings feature coming soon!", Toast.LENGTH_SHORT).show()
+                },
+                onLogoutClick = {
+                    Toast.makeText(context, "Logging out...", Toast.LENGTH_SHORT).show()
+                    // Navigate back to SecondActivity (login screen)
+                    val intent = Intent(context, SecondActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    context.startActivity(intent)
+                    (context as? ComponentActivity)?.finish()
+                },
+                onBookingClick = { booking ->
+                    Toast.makeText(context, "Booking details: ${booking.carName}", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
 
         composable("car_detail/{carId}") { backStackEntry ->
@@ -362,7 +458,7 @@ private fun EmptyQuickBookState(onBrowseCars: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "All cars are currently booked.\nCheck back later or browse our full fleet.",
+            text = "All cars are current@ly booked.\nCheck back later or browse our full fleet.",
             fontSize = 16.sp,
             color = Color.Gray,
             textAlign = TextAlign.Center,

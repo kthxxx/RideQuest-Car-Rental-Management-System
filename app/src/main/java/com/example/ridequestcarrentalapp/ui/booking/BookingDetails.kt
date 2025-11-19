@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import com.example.ridequestcarrentalapp.ui.theme.Helvetica
 import com.example.ridequestcarrentalapp.ui.theme.Orange
 import com.example.ridequestcarrentalapp.data.Car
-import com.example.ridequestcarrentalapp.data.CarRepository
 import com.example.ridequestcarrentalapp.R
 import java.text.SimpleDateFormat
 import java.util.*
@@ -175,6 +174,8 @@ fun BookingFlowScreen(
     car: Car,
     onBackClick: () -> Unit = {},
     onConfirmBookingClick: (BookingDetails) -> Unit = {},
+    onContinueBrowsing: () -> Unit = {}, // Changed from onBookingSuccess
+    onViewBookingDetails: () -> Unit = {}, // Add separate callback for viewing details
     onLocationClick: (String) -> Unit = {}
 ) {
     var currentStep by remember { mutableStateOf(1) }
@@ -185,6 +186,10 @@ fun BookingFlowScreen(
     var pickupLocation by remember { mutableStateOf("Cebu City Center") }
     var returnLocation by remember { mutableStateOf("Cebu City Center") }
     var addInsurance by remember { mutableStateOf(false) }
+
+    // States for the confirmation dialog
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var bookingReference by remember { mutableStateOf("") }
 
     val totalDays = if (pickupDate.isNotEmpty() && returnDate.isNotEmpty()) {
         calculateDaysBetween(pickupDate, returnDate).coerceAtLeast(1)
@@ -200,6 +205,29 @@ fun BookingFlowScreen(
 
     val locations = listOf("Cebu City Center", "Mactan Airport", "SM City Cebu", "Ayala Center",
         "Capitol Site", "Colon Street", "IT Park", "Lahug Area")
+
+    // Booking Confirmation Dialog - IMPORTANT: Don't auto-dismiss
+    if (showConfirmationDialog) {
+        BookingSuccessDialog(
+            bookingReference = bookingReference,
+            carName = "${car.brand} ${car.name}",
+            pickupDate = pickupDate,
+            totalAmount = total,
+            onDismiss = {
+                // This should NOT be called automatically
+                showConfirmationDialog = false
+                onContinueBrowsing()
+            },
+            onViewBooking = {
+                showConfirmationDialog = false
+                onViewBookingDetails()
+            },
+            onContinueBrowsing = {
+                showConfirmationDialog = false
+                onContinueBrowsing()
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -384,7 +412,15 @@ fun BookingFlowScreen(
                                     pickupLocation, returnLocation,
                                     totalDays, subtotal, insurance, tax, total
                                 )
+
+                                // Generate booking reference
+                                bookingReference = generateBookingReference()
+
+                                // Call the original callback
                                 onConfirmBookingClick(bookingDetails)
+
+                                // Show success dialog - it will stay until user clicks a button
+                                showConfirmationDialog = true
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Orange),
                             modifier = Modifier.height(48.dp)
@@ -421,6 +457,404 @@ fun BookingFlowScreen(
             }
         }
     }
+}
+
+// Updated Booking Success Dialog with Continue Browsing button
+@Composable
+fun BookingSuccessDialog(
+    bookingReference: String,
+    carName: String,
+    pickupDate: String,
+    totalAmount: Double,
+    onDismiss: () -> Unit,
+    onViewBooking: () -> Unit,
+    onContinueBrowsing: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { }, // Prevent dismissing by clicking outside
+        containerColor = Color.White,
+        title = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Success Icon
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Orange.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Success",
+                        tint = Orange,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Booking Confirmed!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    fontFamily = Helvetica,
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Your car rental has been successfully confirmed",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    fontFamily = Helvetica,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Booking Details Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Orange.copy(alpha = 0.05f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        BookingConfirmationRow(
+                            label = "Booking Reference",
+                            value = bookingReference,
+                            valueColor = Orange,
+                            valueFontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        BookingConfirmationRow(
+                            label = "Car",
+                            value = carName
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BookingConfirmationRow(
+                            label = "Pickup Date",
+                            value = pickupDate
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BookingConfirmationRow(
+                            label = "Total Amount",
+                            value = "₱${String.format("%,.0f", totalAmount)}",
+                            valueColor = Orange,
+                            valueFontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF0F9FF)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "A confirmation email has been sent to your registered email address",
+                            fontSize = 12.sp,
+                            color = Color(0xFF0284C7),
+                            fontFamily = Helvetica,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Primary Action - View Booking Details
+                Button(
+                    onClick = onViewBooking,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Orange
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Receipt,
+                        contentDescription = "View",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "View Booking Details",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = Helvetica,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+
+                // Secondary Action - Continue Browsing
+                OutlinedButton(
+                    onClick = onContinueBrowsing,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Orange
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Orange),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DirectionsCar,
+                        contentDescription = "Browse",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Continue Browsing Cars",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = Helvetica,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+
+                // Tertiary Action - Back to Home
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Back to Home",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        fontFamily = Helvetica
+                    )
+                }
+            }
+        }
+    )
+}
+
+// Booking Success Dialog
+@Composable
+fun BookingSuccessDialog(
+    bookingReference: String,
+    carName: String,
+    pickupDate: String,
+    totalAmount: Double,
+    onDismiss: () -> Unit,
+    onViewBooking: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        title = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Success Icon
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Orange.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Success",
+                        tint = Orange,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Booking Confirmed!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    fontFamily = Helvetica,
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Your car rental has been successfully confirmed",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    fontFamily = Helvetica,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Booking Details Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Orange.copy(alpha = 0.05f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        BookingConfirmationRow(
+                            label = "Booking Reference",
+                            value = bookingReference,
+                            valueColor = Orange,
+                            valueFontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        BookingConfirmationRow(
+                            label = "Car",
+                            value = carName
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BookingConfirmationRow(
+                            label = "Pickup Date",
+                            value = pickupDate
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BookingConfirmationRow(
+                            label = "Total Amount",
+                            value = "₱${String.format("%,.0f", totalAmount)}",
+                            valueColor = Orange,
+                            valueFontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF0F9FF)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "A confirmation email has been sent to your registered email address",
+                            fontSize = 12.sp,
+                            color = Color(0xFF0284C7),
+                            fontFamily = Helvetica,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onViewBooking,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Orange
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "View Booking Details",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = Helvetica,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Orange
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Orange),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Back to Home",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = Helvetica,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun BookingConfirmationRow(
+    label: String,
+    value: String,
+    valueColor: Color = Color.Black,
+    valueFontWeight: FontWeight = FontWeight.Normal
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            color = Color.Gray,
+            fontFamily = Helvetica
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            color = valueColor,
+            fontWeight = valueFontWeight,
+            fontFamily = Helvetica
+        )
+    }
+}
+
+// Helper function to generate booking reference
+fun generateBookingReference(): String {
+    val timestamp = System.currentTimeMillis()
+    val random = (1000..9999).random()
+    return "RQ${timestamp.toString().takeLast(6)}$random"
 }
 
 @Composable
